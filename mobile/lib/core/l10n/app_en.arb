@@ -1,0 +1,16 @@
+{
+  "appName": "SimplERP",
+  "login": "Login",
+  "email": "Email",
+  "password": "Password",
+  "pleaseEnterEmail": "Please enter your email",
+  "pleaseEnterPassword": "Please enter your password",
+  "superAdmin": "Super Admin",
+  "agencyOwner": "Agency Owner",
+  "salesRep": "Sales Representative",
+  "dashboard": "Dashboard",
+  "sales": "Sales",
+  "stock": "Stock",
+  "orders": "Orders",
+  "reports": "Reports"
+}

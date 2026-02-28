@@ -1,0 +1,173 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../supabaseClient';
+import { Users, UserPlus, Search, Phone, Mail, BadgeCheck, X, Save } from 'lucide-react';
+
+const EmployeeManagement = () => {
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    designation: '',
+    phone: '',
+    email: '',
+    basic_salary: 0
+  });
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('employees')
+      .select('*')
+      .order('name', { ascending: true });
+    
+    if (data) setEmployees(data);
+    setLoading(false);
+  };
+
+  const handleSave = async () => {
+    if (!formData.name) return alert("කරුණාකර නම ඇතුළත් කරන්න!");
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('employees').insert([formData]);
+      if (error) throw error;
+      
+      alert("සේවකයා සාර්ථකව ඇතුළත් කළා!");
+      setIsModalOpen(false);
+      setFormData({ name: '', designation: '', phone: '', email: '', basic_salary: 0 });
+      fetchEmployees();
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredEmployees = employees.filter(emp => 
+    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.designation.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="p-6 bg-slate-50 min-h-screen text-left">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-800 flex items-center gap-3 text-left">
+              <Users className="text-blue-600" size={32} />
+              Staff <span className="text-blue-600">Hub</span>
+            </h1>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 italic text-left">Human Resource Management</p>
+          </div>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition shadow-lg"
+          >
+            <UserPlus size={18} /> Add New Member
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="bg-white p-4 rounded-[1.5rem] shadow-sm mb-8 flex items-center gap-4 border border-white">
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search by name or role..." 
+              className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none text-left"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Employee Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loading && employees.length === 0 ? (
+            <div className="col-span-full p-20 text-center font-black text-slate-300 uppercase italic">Loading Team Data...</div>
+          ) : filteredEmployees.map((emp) => (
+            <div key={emp.id} className="bg-white rounded-[2.5rem] p-6 shadow-xl border border-white hover:border-blue-200 transition-all group relative overflow-hidden text-left">
+              <div className="flex items-center gap-4 mb-6 relative z-10">
+                <div className="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-2xl font-black uppercase shadow-lg shadow-blue-100">
+                  {emp.name.charAt(0)}
+                </div>
+                <div className="text-left">
+                  <h3 className="font-black text-slate-800 uppercase italic leading-tight text-sm">{emp.name}</h3>
+                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{emp.designation || 'Staff'}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-6 relative z-10 text-left">
+                <div className="flex items-center gap-3 text-slate-500 font-bold text-xs italic">
+                  <Phone size={14} className="text-slate-300" /> {emp.phone || 'N/A'}
+                </div>
+                <div className="flex items-center gap-3 text-slate-500 font-bold text-xs italic">
+                  <Mail size={14} className="text-slate-300" /> {emp.email || 'N/A'}
+                </div>
+                <div className="flex items-center gap-3 text-slate-500 font-bold text-xs italic">
+                  <BadgeCheck size={14} className="text-green-400" /> Basic: LKR {emp.basic_salary?.toLocaleString()}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 relative z-10">
+                <button className="bg-slate-50 text-slate-600 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-blue-50 transition">View Logs</button>
+                <button className="bg-blue-600 text-white py-3 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md">Payroll</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Add Employee Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-md rounded-[3rem] p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-left">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-black uppercase italic tracking-tighter text-slate-800">Add New <span className="text-blue-600">Member</span></h2>
+                <button onClick={() => setIsModalOpen(false)} className="p-2 bg-slate-100 rounded-full hover:bg-red-50 hover:text-red-500 transition"><X size={20}/></button>
+              </div>
+              
+              <div className="space-y-4 text-left">
+                <div>
+                  <label className="text-[9px] font-black uppercase text-slate-400 ml-2 mb-1 block">Full Name</label>
+                  <input className="w-full p-4 bg-slate-100 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Sunil Perera" />
+                </div>
+                <div>
+                  <label className="text-[9px] font-black uppercase text-slate-400 ml-2 mb-1 block">Designation</label>
+                  <input className="w-full p-4 bg-slate-100 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500" value={formData.designation} onChange={e => setFormData({...formData, designation: e.target.value})} placeholder="e.g. Lorry Driver" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-slate-400 ml-2 mb-1 block">Phone</label>
+                    <input className="w-full p-4 bg-slate-100 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="071..." />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-slate-400 ml-2 mb-1 block">Basic Salary</label>
+                    <input type="number" className="w-full p-4 bg-slate-100 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500" value={formData.basic_salary} onChange={e => setFormData({...formData, basic_salary: parseFloat(e.target.value) || 0})} placeholder="50000" />
+                  </div>
+                </div>
+                <button 
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-blue-200 mt-4 hover:bg-blue-500 transition disabled:opacity-50"
+                >
+                  {loading ? 'Saving...' : 'Save Employee'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default EmployeeManagement;

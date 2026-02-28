@@ -1,0 +1,175 @@
+%PDF-1.7
+%����
+
+1 0 obj
+<</Type/Catalog/Pages 2 0 R>>
+endobj
+
+2 0 obj
+<</Type/Pages/Count 1/Kids[3 0 R]>>
+endobj
+
+3 0 obj
+<</Type/Page/Parent 2 0 R/Resources<</Font<</F1 4 0 R>>>>/MediaBox[0 0 612 792]/Contents 6 0 R>>
+endobj
+
+4 0 obj
+<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>
+endobj
+
+5 0 obj
+<</Producer(iText� 7.1.1 �2000-2018 iText Group NV \(AGPL-version\))>>
+endobj
+
+6 0 obj
+<</Length 2261>>
+stream
+BT
+/F1 18 Tf
+36 756 Td
+(SimplERP - පද්ධති ස්ථාපන මාර්ගෝපදේශය) Tj
+ET
+
+BT
+/F1 12 Tf
+36 700 Td
+(1. පද්ධති අවශ්‍යතා) Tj
+ET
+
+BT
+/F1 10 Tf
+48 680 Td
+(- XAMPP හෝ WAMP සේවාදායකය) Tj
+48 665 Td
+(- Node.js) Tj
+48 650 Td
+(- Android Studio) Tj
+ET
+
+BT
+/F1 12 Tf
+36 620 Td
+(2. වෙබ් යෙදුම ස්ථාපනය) Tj
+ET
+
+BT
+/F1 10 Tf
+48 600 Td
+(2.1 දත්ත සමුදාය ස්ථාපනය:) Tj
+48 585 Td
+(- XAMPP/WAMP ආරම්භ කරන්න) Tj
+48 570 Td
+(- phpMyAdmin වෙත පිවිසෙන්න) Tj
+48 555 Td
+(- නව දත්ත සමුදායක් සාදන්න: 'simple_erp') Tj
+ET
+
+BT
+/F1 10 Tf
+48 530 Td
+(2.2 යෙදුම ස්ථාපනය:) Tj
+48 515 Td
+(- ගොනු බාගත කර ගන්න) Tj
+48 500 Td
+(- npm install විධානය යොදන්න) Tj
+48 485 Td
+(- .env ගොනුව සකසන්න) Tj
+ET
+
+BT
+/F1 12 Tf
+36 450 Td
+(3. Android යෙදුම) Tj
+ET
+
+BT
+/F1 10 Tf
+48 430 Td
+(3.1 යෙදුම සංවර්ධනය:) Tj
+48 415 Td
+(- Android Studio භාවිතයෙන් යෙදුම විවෘත කරන්න) Tj
+48 400 Td
+(- Gradle sync සිදු කරන්න) Tj
+48 385 Td
+(- APK ගොනුව සාදන්න) Tj
+ET
+
+BT
+/F1 12 Tf
+36 350 Td
+(4. සේවාදායක සැකසුම්) Tj
+ET
+
+BT
+/F1 10 Tf
+48 330 Td
+(4.1 ස්ථානීය සේවාදායකය:) Tj
+48 315 Td
+(- Apache වින්‍යාසය) Tj
+48 300 Td
+(- MySQL වින්‍යාසය) Tj
+ET
+
+BT
+/F1 10 Tf
+48 275 Td
+(4.2 වෙබ් සත්කාරක සේවාව:) Tj
+48 260 Td
+(- ගොනු උඩුගත කිරීම) Tj
+48 245 Td
+(- දත්ත සමුදාය සංක්‍රමණය) Tj
+48 230 Td
+(- වසම් නාම සැකසුම) Tj
+ET
+
+BT
+/F1 12 Tf
+36 195 Td
+(5. පරිශීලක මට්ටම්) Tj
+ET
+
+BT
+/F1 10 Tf
+48 175 Td
+(- Super Admin) Tj
+48 160 Td
+(- Agency Admin) Tj
+48 145 Td
+(- Distributor) Tj
+48 130 Td
+(- Sales Representative) Tj
+ET
+
+BT
+/F1 12 Tf
+36 95 Td
+(6. සහාය සහ නඩත්තුව) Tj
+ET
+
+BT
+/F1 10 Tf
+48 75 Td
+(- පද්ධති යාවත්කාලීන කිරීම්) Tj
+48 60 Td
+(- ආරක්ෂක පිටපත්) Tj
+48 45 Td
+(- දෝෂ නිරාකරණය) Tj
+ET
+
+endstream
+endobj
+
+xref
+0 7
+0000000000 65535 f
+0000000015 00000 n
+0000000061 00000 n
+0000000113 00000 n
+0000000217 00000 n
+0000000305 00000 n
+0000000399 00000 n
+trailer
+<</Size 7/Root 1 0 R/Info 5 0 R>>
+startxref
+2712
+%%EOF
