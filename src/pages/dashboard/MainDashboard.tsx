@@ -85,8 +85,8 @@ const MainDashboard = () => {
   );
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-10">
+    <div className="p-4 sm:p-6 md:p-8 bg-slate-50 min-h-screen">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-10">
         <div className="flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900">
@@ -104,9 +104,9 @@ const MainDashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {/* Received Goods (GRN) */}
-          <div onClick={() => navigate('/inventory/grn/new')} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group">
+          <div onClick={() => navigate('/inventory/grn/new')} className="bg-white p-5 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group min-h-[100px] active:scale-[0.98]">
             <div className="bg-emerald-50 text-emerald-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all">
               <ArrowDownLeft size={24} />
             </div>
@@ -117,7 +117,7 @@ const MainDashboard = () => {
           </div>
 
           {/* Issued Goods (Invoices) */}
-          <div onClick={() => navigate('/sales/new-invoice')} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group">
+          <div onClick={() => navigate('/sales/new-invoice')} className="bg-white p-5 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group min-h-[100px] active:scale-[0.98]">
             <div className="bg-blue-50 text-blue-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-blue-600 group-hover:text-white transition-all">
               <ArrowUpRight size={24} />
             </div>
@@ -128,7 +128,7 @@ const MainDashboard = () => {
           </div>
 
           {/* Market Returns */}
-          <div onClick={() => navigate('/inventory/returns')} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group">
+          <div onClick={() => navigate('/inventory/returns')} className="bg-white p-5 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group min-h-[100px] active:scale-[0.98]">
             <div className="bg-orange-50 text-orange-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-orange-600 group-hover:text-white transition-all">
               <RotateCcw size={24} />
             </div>
@@ -139,7 +139,7 @@ const MainDashboard = () => {
           </div>
 
           {/* Raw Materials */}
-          <div onClick={() => navigate('/inventory/raw-materials/grn/new')} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group">
+          <div onClick={() => navigate('/inventory/raw-materials/grn/new')} className="bg-white p-5 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group min-h-[100px] active:scale-[0.98]">
             <div className="bg-amber-50 text-amber-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-amber-600 group-hover:text-white transition-all">
               <Box size={24} />
             </div>
@@ -150,7 +150,7 @@ const MainDashboard = () => {
           </div>
 
           {/* Gross Revenue - Prominent */}
-          <div onClick={() => navigate('/dashboard/sales')} className="bg-blue-600 p-6 rounded-[2.5rem] shadow-xl border border-blue-500 cursor-pointer hover:shadow-2xl hover:bg-blue-700 transition-all group col-span-1 md:col-span-2">
+          <div onClick={() => navigate('/dashboard/sales')} className="bg-blue-600 p-5 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl border border-blue-500 cursor-pointer hover:shadow-2xl hover:bg-blue-700 transition-all group col-span-1 md:col-span-2 min-h-[100px] active:scale-[0.98]">
             <div className="bg-white/20 text-white p-3 rounded-2xl w-fit mb-4">
               <ShoppingCart size={28} />
             </div>
@@ -161,7 +161,7 @@ const MainDashboard = () => {
           </div>
 
           {/* Stock Value */}
-          <div onClick={() => navigate('/inventory')} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group">
+          <div onClick={() => navigate('/inventory')} className="bg-white p-5 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group min-h-[100px] active:scale-[0.98]">
             <div className="bg-slate-100 text-slate-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-slate-800 group-hover:text-white transition-all">
               <Package size={24} />
             </div>
@@ -172,7 +172,7 @@ const MainDashboard = () => {
           </div>
 
           {/* Transport Card */}
-          <div onClick={() => navigate('/transport')} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group">
+          <div onClick={() => navigate('/transport')} className="bg-white p-5 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl border border-white cursor-pointer hover:shadow-2xl transition-all group min-h-[100px] active:scale-[0.98]">
             <div className="bg-orange-50 text-orange-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-orange-600 group-hover:text-white transition-all">
               <Truck size={24} />
             </div>

@@ -20,13 +20,13 @@ const MainLayout: React.FC = () => {
           lg:ml-64 කියන එකෙන් Desktop එකේදී (Large screens) වම් පැත්තෙන් ඉඩක් තියනවා Sidebar එකට.
           එතකොට content එක වැහෙන්නේ නැහැ.
       */}
-      <div className="flex-1 flex flex-col min-h-screen lg:ml-64 transition-all duration-300 ease-in-out">
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-64 transition-all duration-300 ease-in-out max-w-[1920px] w-full">
         
-        {/* Header එකේ තියෙන Menu Button එකෙන් Sidebar එක open කරන්න මේ Props එක pass කරනවා */}
+        {/* Header: mobile එකේ Menu button එකෙන් Sidebar popup open */}
         <Header onMenuClick={() => setIsMobileSidebarOpen(true)} />
         
-        {/* Dashboard එකේ අන්තර්ගතය (Content) මෙතනින් පේනවා */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 animate-fade-in pb-24 lg:pb-8">
+        {/* Main content: resolution අනුව padding, mobile එකේ bottom nav space */}
+        <main className="flex-1 p-4 sm:p-5 md:p-6 lg:p-8 animate-fade-in pb-24 lg:pb-8 min-w-0">
           <Outlet />
         </main>
         

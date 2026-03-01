@@ -23,7 +23,8 @@ const numberToWords = (num: number): string => {
 const SalesInvoice = () => {
   const { company } = useCompany();
   const location = useLocation() as any;
-  const didAutoLoadInvoice = useRef(false);
+  const lastLoadedInvoiceId = useRef<string | null>(null);
+  const invoiceIdFromRoute = location?.state?.invoiceId || new URLSearchParams(location?.search || '').get('edit');
   const [customers, setCustomers] = useState<any[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
   const [selectedArea, setSelectedArea] = useState('');
@@ -47,12 +48,13 @@ const SalesInvoice = () => {
   useEffect(() => { if (company) fetchData(); }, [company]);
 
   useEffect(() => {
-    const invoiceId = location?.state?.invoiceId;
+    const invoiceId = invoiceIdFromRoute;
     if (!invoiceId || !company?.id) return;
-    if (didAutoLoadInvoice.current) return;
-    didAutoLoadInvoice.current = true;
+    if (lastLoadedInvoiceId.current === invoiceId) return;
+    lastLoadedInvoiceId.current = invoiceId;
 
     (async () => {
+      await fetchData();
       const { data, error } = await supabase
         .from('invoices')
         .select('*, customers(*)')
@@ -64,8 +66,9 @@ const SalesInvoice = () => {
       await loadInvoiceForEdit(data);
     })().catch((err: any) => {
       alert('Error loading invoice: ' + (err?.message || String(err)));
+      lastLoadedInvoiceId.current = null;
     });
-  }, [company?.id, location?.state]);
+  }, [company?.id, invoiceIdFromRoute]);
 
   const fetchData = async () => {
     const { data: custData } = await supabase.from('customers').select('*').eq('company_id', company?.id).order('full_name');
@@ -146,7 +149,7 @@ const SalesInvoice = () => {
       setCustomerDetails(cust || null);
       if (cust?.sales_area) setSelectedArea(cust.sales_area);
 
-      setItems(loadedItems);
+      setItems(loadedItems.length > 0 ? loadedItems : [{ inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
       setSearchResults([]);
       setSearchQuery('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -186,6 +189,20 @@ const SalesInvoice = () => {
 
     newItems[index].total = calculateLineTotal(newItems[index]);
     setItems(newItems);
+  };
+
+  // Customer/Area select කරද්දී ඒ customer ගේ default discount එක සියලු lines ට auto යෙදෙනවා (edit කරන්න පුළුවන්)
+  const applyCustomerDiscountToAllLines = (discountPer: number) => {
+    setItems(prev => prev.map(it => ({
+      ...it,
+      item_discount_per: discountPer,
+      total: calculateLineTotal({ ...it, item_discount_per: discountPer })
+    })));
+  };
+
+  const getDefaultDiscountForNewItems = () => {
+    const d = customerDetails?.default_discount;
+    return Number(d) || 0;
   };
 
   const clearAllItems = () => {
@@ -365,6 +382,13 @@ const SalesInvoice = () => {
   const totalNet = items.reduce((acc, i) => acc + Number(i.total || 0), 0);
   const totalCases = items.reduce((acc, i) => acc + Number(i.cases || 0), 0);
   const totalFreeCases = items.reduce((acc, i) => acc + (i.is_free ? Number(i.cases || 0) : 0), 0);
+  // Print එකට: හරි gross එකෙන් total discount (cases + bottles හරියට)
+  const totalDiscountAmount = items.reduce((acc, i) => {
+    const upc = Number(i.units_per_case) || 12;
+    const totalUnits = (Number(i.cases || 0) * upc) + Number(i.qty_bottles || 0);
+    const gross = (totalUnits / upc) * Number(i.unit_price || 0);
+    return acc + (gross - Number(i.total || 0));
+  }, 0);
 
   // One-time helper to sync old invoices to stock & ledger (if needed)
   const syncOldInvoicesToStock = async () => {
@@ -475,10 +499,24 @@ const SalesInvoice = () => {
           </div>
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase">Customer</label>
-            <select className="w-full p-3 bg-gray-50 rounded-xl font-bold border-none" value={customerDetails?.id || ''} onChange={(e) => setCustomerDetails(customers.find(c => c.id === e.target.value))}>
+            <select
+              className="w-full p-3 bg-gray-50 rounded-xl font-bold border-none"
+              value={customerDetails?.id || ''}
+              onChange={(e) => {
+                const cust = customers.find(c => c.id === e.target.value) || null;
+                setCustomerDetails(cust);
+                const disc = cust ? (Number(cust.default_discount ?? 0) || 0) : 0;
+                if (disc > 0) applyCustomerDiscountToAllLines(disc);
+              }}
+            >
               <option value="">Select Customer</option>
-              {(selectedArea ? customers.filter(c => c.sales_area === selectedArea) : customers).map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+              {(selectedArea ? customers.filter(c => c.sales_area === selectedArea) : customers).map(c => (
+                <option key={c.id} value={c.id}>{c.full_name}</option>
+              ))}
             </select>
+            {customerDetails && customerDetails.default_discount != null && Number(customerDetails.default_discount) > 0 && (
+              <p className="text-[10px] font-bold text-amber-600 mt-1">Default discount: {Number(customerDetails.default_discount)}% (line එකට edit කරන්න පුළුවන්)</p>
+            )}
           </div>
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Vehicle</label><input className="w-full p-3 bg-gray-50 rounded-xl font-bold" value={vehicleNo} onChange={e => setVehicleNo(e.target.value)} /></div>
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Date</label><input type="date" className="w-full p-3 bg-gray-50 rounded-xl font-bold" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} /></div>
@@ -531,6 +569,7 @@ const SalesInvoice = () => {
               <th className="p-3 text-center">CS</th>
               <th className="p-3 text-center">BT</th>
               <th className="p-3 text-right">Price</th>
+              <th className="p-3 text-center">Disc %</th>
               <th className="p-3 text-center">Free</th>
               <th className="p-3 text-right">Total</th>
               <th></th>
@@ -548,6 +587,18 @@ const SalesInvoice = () => {
                 <td className="p-2"><input type="number" className="w-full p-2 bg-blue-50 text-center font-bold rounded-lg" value={item.cases} onChange={e => updateItem(i, 'cases', e.target.value)} /></td>
                 <td className="p-2"><input type="number" className="w-full p-2 bg-gray-50 text-center rounded-lg" value={item.qty_bottles} onChange={e => updateItem(i, 'qty_bottles', e.target.value)} /></td>
                 <td className="p-2 text-right font-bold">{item.unit_price}</td>
+                <td className="p-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    placeholder="0"
+                    className="w-full p-2 bg-amber-50 text-center font-bold rounded-lg border border-amber-200"
+                    value={item.item_discount_per || ''}
+                    onChange={e => updateItem(i, 'item_discount_per', parseFloat(e.target.value) || 0)}
+                  />
+                </td>
                 <td className="p-2 text-center">
                   <input
                     type="checkbox"
@@ -574,7 +625,7 @@ const SalesInvoice = () => {
             </div>
           </div>
           <div className="flex gap-4">
-            <button onClick={() => setItems([...items, { inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, item_discount_per: 0, is_free: false, total: 0 }])} className="bg-gray-700 px-6 py-3 rounded-xl font-bold text-xs uppercase">+ Item</button>
+            <button onClick={() => setItems([...items, { inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, item_discount_per: getDefaultDiscountForNewItems(), is_free: false, total: 0 }])} className="bg-gray-700 px-6 py-3 rounded-xl font-bold text-xs uppercase">+ Item</button>
             <button onClick={handleSaveInvoice} disabled={isSaving} className="bg-blue-600 px-10 py-3 rounded-xl font-bold text-xs flex items-center gap-2 uppercase">
               {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} {editingInvoiceId ? "Update & Print" : "Save & Print"}
             </button>
@@ -686,7 +737,7 @@ const SalesInvoice = () => {
                 </div>
                 <div className="flex gap-4">
                   <span>TOTAL CASES: {totalCases}</span>
-                  <span className="border-l border-black pl-4">TOTAL DISCOUNT: {(items.reduce((acc, i) => acc + ( (Number(i.cases||0) * Number(i.unit_price)) - Number(i.total) ), 0)).toFixed(2)}</span>
+                  <span className="border-l border-black pl-4">TOTAL DISCOUNT: {totalDiscountAmount.toFixed(2)}</span>
                 </div>
             </div>
             

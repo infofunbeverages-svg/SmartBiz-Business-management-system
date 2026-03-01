@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../supabaseClient'; 
-import { ArrowRightLeft, Building2, Ticket, Loader2 } from 'lucide-react';
+import { ArrowRightLeft, Loader2, Pencil, X } from 'lucide-react';
 
 const PaymentRouterPage = () => {
   const [customers, setCustomers] = useState<any[]>([]);
+  const [recentPayments, setRecentPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   
   const bankAccounts = [
     { name: 'HNB Main', acc: '80012345' },
@@ -52,11 +54,53 @@ const PaymentRouterPage = () => {
   const ref2 = useRef<HTMLInputElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { fetchCustomers(); }, []);
+  useEffect(() => { fetchCustomers(); fetchRecentPayments(); }, []);
 
   const fetchCustomers = async () => {
     const { data } = await supabase.from('customers').select('*').order('full_name');
     if (data) setCustomers(data);
+  };
+
+  const fetchRecentPayments = async () => {
+    const { data } = await supabase
+      .from('customer_payments')
+      .select('*, customers(full_name)')
+      .order('created_at', { ascending: false })
+      .limit(40);
+    setRecentPayments(data || []);
+  };
+
+  const loadPaymentForEdit = (p: any) => {
+    setEditingPaymentId(p.id);
+    setCustomerId(p.customer_id);
+    setTotalAmount(p.amount);
+    const method = (p.payment_method || 'CASH').toUpperCase();
+    setPayMethod(method === 'CHEQUE' ? 'CHEQUE' : method === 'BANK' ? 'BANK' : 'CASH');
+    setBankInfo({
+      refNo: p.reference_no && p.payment_method === 'BANK' ? p.reference_no : '',
+      account: p.bank_name || bankAccounts[0].name,
+      date: (p.cheque_date || new Date().toISOString().split('T')[0]).toString().slice(0, 10),
+      narration: p.narration || '',
+    });
+    setCashInfo({ destination: (p.cash_destination as any) || 'Office', narration: p.narration || '' });
+    setChequeInfo({
+      number: p.payment_method === 'CHEQUE' ? (p.reference_no || '') : '',
+      bankName: p.bank_name || '',
+      depositBank: p.deposit_bank || '',
+      chequeDate: (p.cheque_date || '').toString().slice(0, 10),
+      postDate: (p.post_date || p.cheque_date || '').toString().slice(0, 10),
+      narration: p.narration || '',
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingPaymentId(null);
+    setCustomerId('');
+    setTotalAmount(0);
+    setPayMethod('CASH');
+    setBankInfo({ refNo: '', account: bankAccounts[0].name, date: new Date().toISOString().split('T')[0], narration: '' });
+    setCashInfo({ destination: 'Office', narration: '' });
+    setChequeInfo({ number: '', bankName: '', depositBank: '', chequeDate: '', postDate: '', narration: '' });
   };
 
   const handleSaveAll = async () => {
@@ -93,30 +137,56 @@ const PaymentRouterPage = () => {
         post_date: payMethod === 'CHEQUE' && chequeInfo.postDate ? chequeInfo.postDate : null,
       };
 
-      const { data: payment, error: pError } = await supabase
-        .from('customer_payments')
-        .insert([payPayload])
-        .select().single();
+      const ledgerDate = new Date().toISOString().split('T')[0];
 
-      if (pError) throw pError;
+      if (editingPaymentId) {
+        const { error: uErr } = await supabase
+          .from('customer_payments')
+          .update(payPayload)
+          .eq('id', editingPaymentId);
+        if (uErr) throw uErr;
 
-      const ledgerPayload: any = {
-        customer_id: customerId,
-        date: new Date().toISOString().split('T')[0],
-        description: desc,
-        type: 'Payment',
-        reference: refNo,
-        debit: 0,
-        credit: totalAmount,
-        status: payMethod === 'CHEQUE' ? 'Pending' : 'Cleared',
-      };
-      if (payment?.id) ledgerPayload.payment_id = payment.id;
+        const { error: lErr } = await supabase
+          .from('customer_ledger')
+          .update({
+            date: ledgerDate,
+            description: desc,
+            reference: refNo,
+            credit: totalAmount,
+            status: payMethod === 'CHEQUE' ? 'Pending' : 'Cleared',
+          })
+          .eq('payment_id', editingPaymentId);
+        if (lErr) throw lErr;
 
-      const { error: lError } = await supabase.from('customer_ledger').insert([ledgerPayload]);
-      if (lError) throw lError;
+        alert("Payment updated!");
+        cancelEdit();
+        fetchRecentPayments();
+      } else {
+        const { data: payment, error: pError } = await supabase
+          .from('customer_payments')
+          .insert([payPayload])
+          .select().single();
+        if (pError) throw pError;
 
-      alert("සාර්ථකයි!");
-      window.location.reload();
+        const ledgerPayload: any = {
+          customer_id: customerId,
+          date: ledgerDate,
+          description: desc,
+          type: 'Payment',
+          reference: refNo,
+          debit: 0,
+          credit: totalAmount,
+          status: payMethod === 'CHEQUE' ? 'Pending' : 'Cleared',
+        };
+        if (payment?.id) ledgerPayload.payment_id = payment.id;
+
+        const { error: lError } = await supabase.from('customer_ledger').insert([ledgerPayload]);
+        if (lError) throw lError;
+
+        alert("සාර්ථකයි!");
+        cancelEdit();
+        fetchRecentPayments();
+      }
     } catch (error: any) {
       alert("Error: " + error.message);
     } finally {
@@ -235,10 +305,62 @@ const PaymentRouterPage = () => {
                 <p className="text-[10px] font-black uppercase text-slate-400">Net Cash to Office</p>
                 <h4 className="text-4xl font-black italic text-green-400">LKR {(totalAmount - splits.reduce((a, b) => a + b.amount, 0)).toLocaleString()}</h4>
               </div>
-              <button onClick={handleSaveAll} disabled={loading} className="bg-blue-600 hover:bg-blue-500 px-10 py-5 rounded-2xl font-black uppercase italic transition-all disabled:opacity-50">
-                {loading ? <Loader2 className="animate-spin" /> : 'Complete Routing'}
-              </button>
+              <div className="flex gap-2">
+                {editingPaymentId && (
+                  <button onClick={cancelEdit} className="bg-slate-600 hover:bg-slate-500 px-6 py-5 rounded-2xl font-black uppercase italic transition-all">
+                    <X size={18} className="inline mr-1" /> Cancel
+                  </button>
+                )}
+                <button onClick={handleSaveAll} disabled={loading} className="bg-blue-600 hover:bg-blue-500 px-10 py-5 rounded-2xl font-black uppercase italic transition-all disabled:opacity-50">
+                  {loading ? <Loader2 className="animate-spin" /> : editingPaymentId ? 'Update Payment' : 'Complete Routing'}
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-10 bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+          <h3 className="text-lg font-black uppercase mb-6 text-slate-800 italic flex items-center gap-2">
+            Recent Payments <span className="text-[10px] font-normal text-slate-400">(Edit කරන්න ඕනෙ payment එක Edit බොත්තම් එක ක්ලික් කරන්න)</span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
+                <tr>
+                  <th className="p-4 rounded-tl-xl">Customer</th>
+                  <th className="p-4">Date</th>
+                  <th className="p-4">Method</th>
+                  <th className="p-4">Reference</th>
+                  <th className="p-4 text-right">Amount</th>
+                  <th className="p-4 text-center">Status</th>
+                  <th className="p-4 rounded-tr-xl text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {recentPayments.map((p) => (
+                  <tr key={p.id} className={`hover:bg-slate-50 ${editingPaymentId === p.id ? 'bg-blue-50' : ''}`}>
+                    <td className="p-4 font-bold text-slate-700">{p.customers?.full_name || '-'}</td>
+                    <td className="p-4 text-slate-600">{(p.cheque_date || p.created_at || '').toString().slice(0, 10)}</td>
+                    <td className="p-4"><span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-black">{p.payment_method || '-'}</span></td>
+                    <td className="p-4 font-mono text-xs">{p.reference_no || '-'}</td>
+                    <td className="p-4 text-right font-black text-blue-600">LKR {Number(p.amount || 0).toLocaleString()}</td>
+                    <td className="p-4 text-center">
+                      <span className={`px-2 py-1 rounded text-[9px] font-black ${
+                        p.status === 'Cleared' ? 'bg-green-100 text-green-700' : p.status === 'Returned' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                      }`}>{p.status}</span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => loadPaymentForEdit(p)}
+                        className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-[10px] font-black hover:bg-blue-200"
+                      >
+                        <Pencil size={14} /> Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

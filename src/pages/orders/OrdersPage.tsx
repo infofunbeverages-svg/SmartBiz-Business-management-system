@@ -119,7 +119,7 @@ const OrdersPage: React.FC = () => {
           </button>
           
           <button 
-            onClick={() => navigate('/sales/new-invoice', { state: { invoiceId: o.dbId } })}
+            onClick={() => navigate(`/sales/new-invoice?edit=${o.dbId}`, { state: { invoiceId: o.dbId } })}
             className="flex items-center gap-1 px-3 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase hover:bg-black transition-all shadow-md active:scale-95"
           >
             <Edit size={14} /> Edit

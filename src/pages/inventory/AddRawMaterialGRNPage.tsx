@@ -84,7 +84,7 @@ const AddRawMaterialGRNPage = () => {
     setLoading(true);
     try {
       const totalAmount = calculateTotal();
-      const { data: master } = await supabase
+      const { data: master, error: masterError } = await supabase
         .from('raw_material_grn_master')
         .insert([
           {
@@ -96,16 +96,21 @@ const AddRawMaterialGRNPage = () => {
         .select()
         .single();
 
-      if (!master) throw new Error('Failed to create GRN');
+      if (masterError) {
+        throw new Error(masterError.message || 'Failed to create GRN');
+      }
+      if (!master) {
+        throw new Error('Failed to create GRN');
+      }
 
       for (const item of items) {
         const mat = getMaterial(item.raw_material_id);
         if (!mat) continue;
 
         const qty = Number(item.quantity) || 0;
-        const unitPrice = Number(item.unit_price) || 0;
+        const unitPrice = Number(item.unit_price) ?? 0;
 
-        await supabase.from('raw_material_grn_items').insert([
+        const { error: itemError } = await supabase.from('raw_material_grn_items').insert([
           {
             grn_id: master.id,
             raw_material_id: item.raw_material_id,
@@ -115,6 +120,7 @@ const AddRawMaterialGRNPage = () => {
             total_price: qty * unitPrice,
           },
         ]);
+        if (itemError) throw new Error('GRN items: ' + itemError.message);
 
         await supabase.from('raw_material_movements').insert([
           {
@@ -213,7 +219,7 @@ const AddRawMaterialGRNPage = () => {
               <th className="p-4 text-left">Raw Material</th>
               <th className="p-4">Unit</th>
               <th className="p-4">Qty</th>
-              <th className="p-4">Unit Price</th>
+              <th className="p-4">Unit Price <span className="text-gray-400 font-normal">(Optional)</span></th>
               <th className="p-4 text-right">Subtotal</th>
               <th className="p-4"></th>
             </tr>
@@ -262,11 +268,14 @@ const AddRawMaterialGRNPage = () => {
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
                       className="w-full p-2 bg-gray-50 rounded-lg text-right font-bold"
-                      value={item.unit_price || ''}
+                      placeholder="Optional (0)"
+                      value={item.unit_price === 0 ? '' : item.unit_price}
                       onChange={(e) => {
                         const n = [...items];
-                        n[index].unit_price = parseFloat(e.target.value) || 0;
+                        const v = e.target.value;
+                        n[index].unit_price = v === '' ? 0 : parseFloat(v) || 0;
                         setItems(n);
                       }}
                     />

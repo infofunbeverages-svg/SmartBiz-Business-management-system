@@ -47,6 +47,7 @@ const CustomersPage = () => {
     region_id: '', sales_area: '', payment_type: 'Cash',
     gps_location: `${WAREHOUSE_COORDS.lat},${WAREHOUSE_COORDS.lng}`, 
     distance_km: 0, bank_guarantee_value: 0, bg_start_date: '', bg_expiry_date: '', 
+    default_discount: 0
   });
 
   useEffect(() => { if (company) fetchData(); }, [company]);
@@ -108,6 +109,7 @@ const CustomersPage = () => {
       bank_guarantee_value: newCustomer.payment_type === 'Cash' ? 0 : newCustomer.bank_guarantee_value,
       bg_start_date: newCustomer.payment_type === 'Cash' ? null : (newCustomer.bg_start_date || null),
       bg_expiry_date: newCustomer.payment_type === 'Cash' ? null : (newCustomer.bg_expiry_date || null),
+      default_discount: Number(newCustomer.default_discount) || 0,
       company_id: company.id
     };
 
@@ -122,6 +124,7 @@ const CustomersPage = () => {
             region_id: '', sales_area: '', payment_type: 'Cash',
             gps_location: `${WAREHOUSE_COORDS.lat},${WAREHOUSE_COORDS.lng}`, 
             distance_km: 0, bank_guarantee_value: 0, bg_start_date: '', bg_expiry_date: '', 
+            default_discount: 0
         });
     } else { alert("Error: " + error.message); }
     setLoading(false);
@@ -143,6 +146,10 @@ const CustomersPage = () => {
             <input type="text" placeholder="Full Name" required className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none" value={newCustomer.full_name} onChange={e => setNewCustomer({...newCustomer, full_name: e.target.value})} />
             <input type="text" placeholder="ID / Passport Number" className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none" value={newCustomer.id_number} onChange={e => setNewCustomer({...newCustomer, id_number: e.target.value})} />
             <input type="text" placeholder="Sales Area" className="w-full bg-blue-50 p-4 rounded-2xl font-bold outline-none border-2 border-blue-200" value={newCustomer.sales_area} onChange={e => setNewCustomer({...newCustomer, sales_area: e.target.value})} />
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Default Discount % (Invoice)</label>
+              <input type="number" step="0.01" min="0" max="100" placeholder="0" className="w-full bg-amber-50 p-4 rounded-2xl font-bold outline-none border-2 border-amber-200" value={newCustomer.default_discount === 0 ? '' : newCustomer.default_discount} onChange={e => setNewCustomer({...newCustomer, default_discount: parseFloat(e.target.value) || 0})} />
+            </div>
             <input type="text" placeholder="Phone" required className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
           </div>
 
@@ -208,7 +215,7 @@ const CustomersPage = () => {
 
               <button onClick={() => { 
                 const { regions, ...rest } = c;
-                setNewCustomer({...newCustomer, ...rest, full_name: c.full_name || c.name || ''}); 
+                setNewCustomer({...newCustomer, ...rest, full_name: c.full_name || c.name || '', default_discount: c.default_discount ?? 0}); 
                 setEditingId(c.id); setShowAddForm(true); 
               }} className="absolute top-20 right-6 p-2 bg-slate-50 rounded-full text-slate-300 hover:text-blue-600"> <Edit3 size={18} /> </button>
               
@@ -216,6 +223,9 @@ const CustomersPage = () => {
               
               <div className="flex items-center gap-1 mb-4 text-blue-600 font-black italic text-[11px] uppercase">
                 <Tent size={12}/> {c.sales_area || 'No Area Specified'}
+                {(c.default_discount != null && Number(c.default_discount) > 0) && (
+                  <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px]">Disc: {Number(c.default_discount)}%</span>
+                )}
               </div>
 
               <div className="space-y-2 mb-6 text-xs font-bold text-slate-400 italic border-t pt-4"> 

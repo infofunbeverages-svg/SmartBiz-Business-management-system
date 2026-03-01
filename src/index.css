@@ -7,11 +7,23 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    /* Allow zoom on Report / pages for accessibility */
+    -webkit-text-size-adjust: 100%;
   }
   
   body {
     @apply bg-secondary-50 text-secondary-900 antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  
+  /* Touch-friendly minimum tap targets on mobile */
+  @media (max-width: 1023px) {
+    button:not(.no-touch-target),
+    a[role="button"],
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
   }
   
   h1, h2, h3, h4, h5, h6 {

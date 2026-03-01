@@ -6,7 +6,8 @@ import { Link } from 'react-router-dom';
 import { 
   Printer, FileSpreadsheet, RefreshCcw, Filter, Box, 
   ArrowUpRight, ArrowDownLeft, RotateCcw, 
-  LayoutDashboard, ShoppingCart, Banknote, History, Plus, Wallet
+  LayoutDashboard, ShoppingCart, Banknote, History, Plus, Wallet,
+  ZoomIn, ZoomOut
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useCompany } from '../../utils/useCompany';
@@ -26,6 +27,8 @@ const ReportsPage = () => {
     start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   });
+  const [pageZoom, setPageZoom] = useState(100);
+  const zoomOptions = [80, 90, 100, 110, 125];
 
   const fetchData = useCallback(async () => {
     if (!company) return;
@@ -86,18 +89,32 @@ const ReportsPage = () => {
   };
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-slate-50/50">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 min-h-screen bg-slate-50/50">
       
       {/* --- HEADER SECTION --- */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 no-print">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6 no-print">
         <div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter flex items-center gap-2 text-slate-800">
-            <LayoutDashboard className="text-blue-600" size={32} /> {activeModule} <span className="text-blue-600">REPORTS</span>
+          <h1 className="text-xl sm:text-3xl font-black uppercase italic tracking-tighter flex items-center gap-2 text-slate-800">
+            <LayoutDashboard className="text-blue-600" size={28} /> {activeModule} <span className="text-blue-600">REPORTS</span>
           </h1>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Date Range: {dateRange.start} to {dateRange.end}</p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
+          {/* Zoom: Report / Page zoom control */}
+          <div className="flex items-center gap-1 sm:gap-2 bg-white border border-slate-200 rounded-xl px-2 py-1.5 shadow-sm">
+            <ZoomOut size={18} className="text-slate-500 flex-shrink-0" />
+            <select 
+              value={pageZoom} 
+              onChange={(e) => setPageZoom(Number(e.target.value))}
+              className="text-xs font-bold bg-transparent border-none py-2 pr-1 focus:ring-0 cursor-pointer min-h-[44px] sm:min-h-0"
+            >
+              {zoomOptions.map((z) => (
+                <option key={z} value={z}>{z}%</option>
+              ))}
+            </select>
+            <ZoomIn size={18} className="text-slate-500 flex-shrink-0" />
+          </div>
           {activeModule === 'RETURNS' && (
             <>
               <Link to="/inventory/returns" className="flex items-center gap-2 bg-orange-600 text-white px-5 py-2.5 rounded-2xl hover:bg-orange-700 transition shadow-lg font-bold text-xs uppercase">
@@ -108,11 +125,11 @@ const ReportsPage = () => {
               </Link>
             </>
           )}
-          <button onClick={exportToExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-2xl hover:bg-emerald-700 transition shadow-lg font-bold text-xs uppercase">
-            <FileSpreadsheet size={18} /> Excel Export
+          <button type="button" onClick={exportToExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-4 sm:px-5 py-3 sm:py-2.5 rounded-2xl hover:bg-emerald-700 transition shadow-lg font-bold text-xs uppercase min-h-[44px] sm:min-h-0">
+            <FileSpreadsheet size={18} /> Excel
           </button>
-          <button onClick={() => window.print()} className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-2xl hover:bg-black transition shadow-lg font-bold text-xs uppercase">
-            <Printer size={18} /> Print PDF
+          <button type="button" onClick={() => window.print()} className="flex items-center gap-2 bg-slate-900 text-white px-4 sm:px-5 py-3 sm:py-2.5 rounded-2xl hover:bg-black transition shadow-lg font-bold text-xs uppercase min-h-[44px] sm:min-h-0">
+            <Printer size={18} /> Print
           </button>
         </div>
       </div>
@@ -166,9 +183,18 @@ const ReportsPage = () => {
         </CardContent>
       </Card>
 
-      {/* --- REPORT TABLE --- */}
-      <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white print:shadow-none">
-        <CardContent className="p-0">
+      {/* --- REPORT TABLE (zoom applied for mobile/desktop) --- */}
+      <div 
+        className="origin-top-left"
+        style={{ 
+          transform: `scale(${pageZoom / 100})`,
+          transformOrigin: 'top left',
+          width: pageZoom === 100 ? '100%' : `${(100 / pageZoom) * 100}%`,
+          minHeight: pageZoom === 100 ? undefined : `${(100 / pageZoom) * 100}vh`,
+        }}
+      >
+        <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white print:shadow-none">
+          <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-32">
               <div className="animate-spin inline-block w-10 h-10 border-[3px] border-blue-600 border-t-transparent rounded-full mb-4"></div>
@@ -202,6 +228,7 @@ const ReportsPage = () => {
           )}
         </CardContent>
       </Card>
+      </div>
 
       {/* --- PRINT STYLES --- */}
       <style>{`
