@@ -28,7 +28,7 @@ import TransportDashboard from './pages/transport/TransportDashboard';
 import TransportSetup from './pages/transport/TransportSetup'; 
 import TransportLog from './pages/transport/TransportLog'; 
 import ActivityLogPage from './pages/admin/ActivityLogPage';
-import UserManagement from './pages/settings/UserManagement'; 
+import UserManagement from './pages/Settings/UserManagement'; 
 import Regions from './pages/admin/Regions'; 
 
 // HRM & Maintenance
