@@ -17,7 +17,7 @@ const numberToWords = (num: number): string => {
   if (num >= 1000) { str += format(Math.floor(num / 1000)) + 'Thousand '; num %= 1000; }
   if (num >= 100) { str += format(Math.floor(num / 100)) + 'Hundred '; num %= 100; }
   if (num > 0) str += (str !== '' ? 'and ' : '') + format(num);
-  return str.trim() + ' Rupees Only';
+  return str.toUpperCase().trim() + ' RUPEES ONLY';
 };
 
 const SalesInvoice = () => {
@@ -582,7 +582,7 @@ const SalesInvoice = () => {
         </div>
       </div>
 
-      {/* 3. RECENT INVOICES LIST (මේක තමයි උඹ කිව්වේ නෑ කියලා) */}
+      {/* 3. RECENT INVOICES LIST */}
       <div className="max-w-6xl mx-auto no-print bg-white p-6 rounded-[2rem] border shadow-sm">
         <h3 className="font-black mb-4 flex items-center gap-2 uppercase"><List size={18} /> Recent Invoices</h3>
         <table className="w-full text-sm">
@@ -619,39 +619,113 @@ const SalesInvoice = () => {
         </div>
       </div>
 
-      {/* 4. PRINT TEMPLATE (Pure Layout) */}
-      <div className="hidden print:block w-[210mm] mx-auto p-[10mm] text-black">
-        <div className="flex justify-between border-b-4 border-black pb-4 mb-4">
-          <div className="flex gap-4">
-            <img src={LOGO_URL} className="w-20 h-20 object-contain grayscale" />
-            <div>
-              <h1 className="text-3xl font-black">EVERMARK LANKA</h1>
-              <p className="text-xs font-bold uppercase">Nehinna, Dodangoda, Kalutara South</p>
+      {/* 4. NEW PRINT TEMPLATE (UPDATED TO MATCH IMAGE) */}
+      <div className="hidden print:block w-full text-black font-sans p-4" style={{ fontSize: '12px' }}>
+        {/* Header Section */}
+        <div className="flex justify-between items-start mb-2">
+            <div className="flex items-center gap-3">
+                <img src={LOGO_URL} className="w-16 h-16 object-contain" />
+                <div>
+                    <h1 className="text-2xl font-black m-0 leading-tight">EVERMARK LANKA</h1>
+                    <p className="text-[10px] font-bold m-0 uppercase">Nehinna, Dodangoda, Kalutara South</p>
+                </div>
             </div>
-          </div>
-          <div className="text-right">
-            <h2 className="text-2xl font-black border-4 border-black px-4 py-1">INVOICE</h2>
-            <p className="font-black">#{invoiceNo}</p>
-          </div>
+            <div className="text-right leading-tight">
+                <p className="text-[10px] font-bold">TEL: 0712315315</p>
+                <p className="text-[10px] font-bold">EMAIL: info.funbeverages@gmail.com</p>
+            </div>
         </div>
-        <table className="w-full text-[13px] font-black border-collapse mb-8">
-            <thead className="bg-gray-100 border-y-2 border-black">
-                <tr><th className="p-2 text-left">ITEM</th><th className="text-center">CS</th><th className="text-center">BT</th><th className="text-right">RATE</th><th className="text-right p-2">AMOUNT</th></tr>
+
+        <div className="border-y border-black py-1 mb-4">
+            <h2 className="text-center text-xl font-black tracking-widest m-0">SALES INVOICE</h2>
+        </div>
+
+        {/* Invoice Info Bar */}
+        <div className="grid grid-cols-2 gap-x-10 gap-y-1 mb-4 font-bold uppercase text-[11px]">
+            <div className="flex justify-between border-b border-dotted border-gray-400"><span>INV: {invoiceNo}</span><span>DATE: {invoiceDate.split('-').reverse().join('/')}</span></div>
+            <div className="flex justify-between border-b border-dotted border-gray-400"><span>VEHICLE: {vehicleNo || 'N/A'}</span></div>
+            <div className="flex justify-between border-b border-dotted border-gray-400"><span>TO: {customerDetails?.full_name || 'CASH CUSTOMER'}</span><span>DRIVER: {driverName || 'N/A'}</span></div>
+            <div className="flex justify-between border-b border-dotted border-gray-400"><span>ADDR: {customerDetails?.address || 'N/A'}</span></div>
+        </div>
+
+        {/* Items Table */}
+        <table className="w-full border-collapse mb-2">
+            <thead>
+                <tr className="border-y border-black font-black text-[11px]">
+                    <th className="text-left py-1">DESCRIPTION</th>
+                    <th className="text-center">CS</th>
+                    <th className="text-center">BT</th>
+                    <th className="text-right">RATE</th>
+                    <th className="text-right">DISC</th>
+                    <th className="text-right">TOTAL</th>
+                </tr>
             </thead>
-            <tbody>
-                {items.map((it, idx) => it.inventory_id && (
-                    <tr key={idx} className="border-b border-gray-300">
-                        <td className="p-2 uppercase">{stock.find(s => s.id === it.inventory_id)?.name}</td>
-                        <td className="text-center">{it.cases || 0}</td><td className="text-center">{it.qty_bottles || 0}</td>
-                        <td className="text-right">{Number(it.unit_price).toFixed(2)}</td><td className="text-right p-2">{Number(it.total).toFixed(2)}</td>
-                    </tr>
-                ))}
+            <tbody className="font-bold text-[11px]">
+                {items.map((it, idx) => {
+                    const prod = stock.find(s => s.id === it.inventory_id);
+                    if (!prod) return null;
+                    return (
+                        <tr key={idx} className="border-b border-dotted border-gray-300">
+                            <td className="py-1 uppercase">{prod.name} {it.is_free ? '(FREE)' : ''}</td>
+                            <td className="text-center">{it.cases || 0}</td>
+                            <td className="text-center">{it.qty_bottles || 0}</td>
+                            <td className="text-right">{Number(it.unit_price).toFixed(2)}</td>
+                            <td className="text-right">{it.is_free ? '0.0%' : (it.item_discount_per || '0.0') + '%'}</td>
+                            <td className="text-right">{Number(it.total).toFixed(2)}</td>
+                        </tr>
+                    );
+                })}
             </tbody>
         </table>
-        <div className="text-right border-t-2 border-black pt-4">
-            <h3 className="text-xl font-black uppercase">Net Total: LKR {totalNet.toLocaleString()}</h3>
-            <p className="text-sm font-bold mt-1 capitalize">{numberToWords(Math.round(totalNet))}</p>
+
+        {/* Summary Section */}
+        <div className="border-t border-black pt-1 mb-6">
+            <div className="flex justify-between font-black text-[10px] mb-2">
+                <div className="flex gap-4">
+                  <span>WORDS: {numberToWords(Math.round(totalNet))}</span>
+                </div>
+                <div className="flex gap-4">
+                  <span>TOTAL CASES: {totalCases}</span>
+                  <span className="border-l border-black pl-4">TOTAL DISCOUNT: {(items.reduce((acc, i) => acc + ( (Number(i.cases||0) * Number(i.unit_price)) - Number(i.total) ), 0)).toFixed(2)}</span>
+                </div>
+            </div>
+            
+            <div className="flex justify-end items-center gap-4">
+                <span className="text-2xl font-black">NET TOTAL: LKR {totalNet.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
         </div>
+
+        <p className="text-[9px] font-bold mb-8">PAYMENT SHOULD BE MADE WITHIN THE CREDIT PERIOD INDICATED ABOVE, ALL THE CHEQUES SHOULD BE DRAWN IN FAVOUR OF EVERMARK LANKA.</p>
+
+        {/* Signatures */}
+        <div className="grid grid-cols-3 gap-10 mt-12 text-center font-bold text-[10px]">
+            <div className="border-t border-black pt-1">CHECKED BY</div>
+            <div className="border-t border-black pt-1">GOODS ISSUED BY</div>
+            <div className="border-t border-black pt-1">APPROVED BY</div>
+        </div>
+
+        <div className="flex justify-between items-end mt-12">
+            <div className="w-1/2 text-[9px] font-bold">
+                <p className="mb-1">CUSTOMER NAME: ................................................. NIC NO: ...........................</p>
+                <p className="italic">We received above goods in good order & condition</p>
+            </div>
+            <div className="w-1/3 border-t border-black text-center font-bold text-[10px]">
+                CUSTOMER SIGNATURE
+            </div>
+        </div>
+
+        <div className="mt-6 border border-black p-2 text-[9px] font-bold leading-tight">
+            <p>NOTE: POST DATED CHEQUES ARE SUBJECT TO REALIZATION. IF YOUR FIND ANY DISCREPANCY IN THE BALANCE VERIFY WITHIN 7 DAYS.</p>
+            <p className="mt-1">***ONLY 1% ACCEPTING MARKET RETURNS FROM MONTHLY TURN OVER AND, WE ARE NOT ACCEPTING SODA 350ML, 750ML AS MARKET RETURNS GOODS***</p>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-4 text-[10px] font-bold">
+            <div className="border border-black p-1 px-2">TRANSPORTER NAME : ..............................................</div>
+            <div className="border border-black p-1 px-2">ID NO : ..............................................</div>
+            <div className="border border-black p-1 px-2">SIGNATURE : ..............................................</div>
+            <div className="border border-black p-1 px-2">PHONE NO : ..............................................</div>
+        </div>
+
       </div>
     </div>
   );
