@@ -2,7 +2,7 @@ const handlePermissionChange = async (userId: string, moduleId: string, value: b
   const user = users.find(u => u.id === userId);
   const updatedPermissions = { ...user.permissions, [moduleId]: value };
   
-  // Fallback: පරණ කොලම්ස් වලටත් අගයන් දාමු (Backwards compatibility)
+  // Backwards compatibility for legacy columns
   const extraUpdates: any = {};
   if (moduleId === 'inventory') extraUpdates.inventory_access = value;
   if (moduleId === 'orders') extraUpdates.invoice_access = value;
@@ -12,7 +12,7 @@ const handlePermissionChange = async (userId: string, moduleId: string, value: b
     .from('profiles')
     .update({ 
       permissions: updatedPermissions,
-      ...extraUpdates // මෙතනින් පරණ කොලම්ස් වලටත් වැටෙනවා
+      ...extraUpdates 
     })
     .eq('id', userId);
 
@@ -20,7 +20,7 @@ const handlePermissionChange = async (userId: string, moduleId: string, value: b
     setUsers(users.map(u => u.id === userId ? { ...u, permissions: updatedPermissions, ...extraUpdates } : u));
   } else {
     console.error("Update Error:", error);
-    alert("Error updating permission! Check if column 'permissions' exists.");
+    alert("Authorization Error: Could not update access levels.");
   }
   setSaving(null);
 };

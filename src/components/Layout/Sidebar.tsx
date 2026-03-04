@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, Package, ShoppingCart, 
   DollarSign, ChevronDown, LogOut, Settings, 
-  X, Truck, UserCircle, FileBarChart // FileBarChart icon එක අලුතින් ගත්තා
+  X, Truck, UserCircle, FileBarChart 
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { supabase } from '../../supabaseClient';
@@ -16,13 +16,31 @@ type SidebarProps = {
 const Sidebar: React.FC<SidebarProps> = ({ isMobileSidebarOpen, setIsMobileSidebarOpen }) => {
   const location = useLocation();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [userRole, setUserRole]       = useState<string | null>(null);
+  const [perms, setPerms]             = useState<any>({});
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role, permissions')
+          .eq('id', user.id)
+          .single();
+        setUserRole(data?.role || null);
+        setPerms(data?.permissions || {});
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  // Super admin / admin ta okkoma permissions thiyenawa
+  const isSuperAdmin = userRole === 'super_admin' || userRole === 'admin';
+  const can = (permId: string) => isSuperAdmin || !!perms[permId];
 
   const handleLinkClick = () => { if (window.innerWidth < 1024) setIsMobileSidebarOpen(false); };
-  
-  const toggleSubmenu = (menu: string) => {
-    setOpenSubmenu(openSubmenu === menu ? null : menu);
-  };
-
+  const toggleSubmenu = (menu: string) => { setOpenSubmenu(openSubmenu === menu ? null : menu); };
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
@@ -30,86 +48,89 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileSidebarOpen, setIsMobileSideb
     {
       title: 'Inventory',
       icon: <Package size={20} />,
-      show: true,
+      show: isSuperAdmin || can('inv_add_grn') || can('inv_raw_material_grn') || can('inv_returns_damages') || can('inv_stock_movement'),
       submenu: [
-        { title: 'Products List', path: '/inventory', show: true },
-        { title: 'Raw Materials', path: '/inventory/raw-materials', show: true },
-        { title: 'Suppliers List', path: '/inventory/suppliers', show: true },
-        { title: 'Add GRN (Stock In)', path: '/inventory/grn/new', show: true },
-        { title: 'Add Raw Material GRN', path: '/inventory/raw-materials/grn/new', show: true },
-        { title: 'Returns & Damages', path: '/inventory/returns', show: true },
-        { title: 'Stock Movement', path: '/inventory/reports', show: true },
+        { title: 'Products List',        path: '/inventory',                        show: true },
+        { title: 'Raw Materials',        path: '/inventory/raw-materials',          show: true },
+        { title: 'Suppliers List',       path: '/inventory/suppliers',              show: true },
+        { title: 'Add GRN (Stock In)',   path: '/inventory/grn/new',               show: isSuperAdmin || can('inv_add_grn') },
+        { title: 'Add Raw Material GRN', path: '/inventory/raw-materials/grn/new', show: isSuperAdmin || can('inv_raw_material_grn') },
+        { title: 'Returns & Damages',    path: '/inventory/returns',               show: isSuperAdmin || can('inv_returns_damages') },
+        { title: 'Stock Movement',       path: '/inventory/reports',               show: isSuperAdmin || can('inv_stock_movement') },
       ]
     },
     {
       title: 'Sales & Orders',
       icon: <ShoppingCart size={20} />,
-      show: true,
+      show: isSuperAdmin || can('sales_new_invoice') || can('sales_purchase_order') || can('sales_all_invoices_view') || can('sales_agency_orders'),
       submenu: [
-        { title: 'Sales Dashboard', path: '/dashboard/sales', show: true },
-        { title: 'New Invoice', path: '/sales/new-invoice', show: true },
-        { title: 'Purchase Order', path: '/orders/new', show: true },
-        { title: 'All Invoices / Orders', path: '/orders', show: true },
-        { title: 'Agency Orders', path: '/sales/agencies', show: true },
+        { title: 'Sales Dashboard',        path: '/dashboard/sales',   show: true },
+        { title: 'New Invoice',            path: '/sales/new-invoice', show: isSuperAdmin || can('sales_new_invoice') },
+        { title: 'Purchase Order',         path: '/orders/new',        show: isSuperAdmin || can('sales_purchase_order') },
+        { title: 'All Invoices / Orders',  path: '/orders',            show: isSuperAdmin || can('sales_all_invoices_view') },
+        { title: 'Agency Orders',          path: '/sales/agencies',    show: isSuperAdmin || can('sales_agency_orders') },
       ]
     },
-    { title: 'Customers', path: '/customers', icon: <Users size={20} />, show: true },
+    {
+      title: 'Customers',
+      path: '/customers',
+      icon: <Users size={20} />,
+      show: isSuperAdmin || can('customer_view') || can('customer_edit')
+    },
     { 
       title: 'Finance', 
       icon: <DollarSign size={20} />, 
-      show: true,
+      show: isSuperAdmin || can('finance_payment_view') || can('customer_ledger_view') || can('finance_payment_router'),
       submenu: [
-        { title: 'Customer Ledger', path: '/finance/ledger', show: true },
-        { title: 'Payments & Returns', path: '/finance/payments', show: true },
-        { title: 'Payment Router', path: '/finance/payment-router', show: true },
+        { title: 'Customer Ledger',   path: '/finance/ledger',         show: isSuperAdmin || can('customer_ledger_view') },
+        { title: 'Payments & Returns',path: '/finance/payments',       show: isSuperAdmin || can('finance_payment_view') },
+        { title: 'Payment Router',    path: '/finance/payment-router', show: isSuperAdmin || can('finance_payment_router') },
       ]
     },
-    // --- මෙතනට තමයි අලුත් Reports Module එක දැම්මේ ---
     { 
       title: 'Analytical Reports', 
       icon: <FileBarChart size={20} />, 
-      show: true,
+      show: isSuperAdmin || can('reports_view'),
       submenu: [
-        { title: 'System Wide Reports', path: '/inventory/reports', show: true },
+        { title: 'System Wide Reports', path: '/inventory/reports', show: isSuperAdmin || can('reports_view') },
       ]
     },
     { 
       title: 'Human Resources', 
       icon: <UserCircle size={20} />, 
-      show: true,
+      show: isSuperAdmin || can('hrm_access'),
       submenu: [
-        { title: 'Staff Directory', path: '/hrm/employees', show: true },
-        { title: 'Payroll System', path: '/hrm/payroll', show: true },
+        { title: 'Staff Directory', path: '/hrm/employees', show: isSuperAdmin || can('hrm_access') },
+        { title: 'Payroll System',  path: '/hrm/payroll',   show: isSuperAdmin || can('hrm_access') },
       ]
     },
     { 
       title: 'Transport', 
       icon: <Truck size={20} />, 
-      show: true,
+      show: isSuperAdmin || can('transport_triplog') || can('transport_vehicle_view'),
       submenu: [
-        { title: 'Fleet Overview', path: '/transport', show: true },
-        { title: 'Daily Trip Log', path: '/transport/log', show: true },
-        { title: 'Maintenance Logs', path: '/transport/maintenance', show: true },
-        { title: 'Vehicle Setup', path: '/transport/setup', show: true },
+        { title: 'Fleet Overview',    path: '/transport',             show: true },
+        { title: 'Daily Trip Log',    path: '/transport/log',         show: isSuperAdmin || can('transport_triplog') },
+        { title: 'Maintenance Logs',  path: '/transport/maintenance', show: true },
+        { title: 'Vehicle Setup',     path: '/transport/setup',       show: isSuperAdmin || can('transport_vehicle_view') },
       ]
     },
     { 
       title: 'Admin & Settings', 
       icon: <Settings size={20} />, 
-      show: true,
+      show: isSuperAdmin,
       submenu: [
-        { title: 'Activity Logs', path: '/admin/activity-log', show: true },
-        { title: 'User Management', path: '/settings/users', show: true },
-        { title: 'Permissions', path: '/admin/permissions', show: true },
-        { title: 'Company Setup', path: '/admin/company-setup', show: true },
-        { title: 'Region Management', path: '/admin/regions', show: true },
+        { title: 'Activity Logs',      path: '/admin/activity-log',    show: true },
+        { title: 'User Management',    path: '/settings/users',        show: true },
+        { title: 'Permissions',        path: '/admin/permissions',     show: true },
+        { title: 'Company Setup',      path: '/admin/company-setup',   show: true },
+        { title: 'Region Management',  path: '/admin/regions',         show: true },
       ]
     },
   ];
 
   return (
     <>
-      {/* Mobile: overlay when sidebar open — popup feel */}
       {isMobileSidebarOpen && (
         <div 
           className="fixed inset-0 z-[60] bg-black/50 lg:hidden backdrop-blur-sm transition-opacity"
@@ -151,7 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileSidebarOpen, setIsMobileSideb
                   </button>
                   {openSubmenu === item.title && (
                     <div className="ml-6 border-l-2 border-blue-100 pl-4 mt-1 space-y-1">
-                      {item.submenu.map((sub) => (
+                      {item.submenu.filter(s => s.show).map((sub) => (
                         <Link key={sub.title} to={sub.path} onClick={handleLinkClick} className={cn("block py-2.5 min-h-[40px] flex items-center text-[10px] font-black uppercase text-left transition-colors", isActive(sub.path) ? "text-blue-600" : "text-gray-400 hover:text-blue-600")}>
                           {sub.title}
                         </Link>

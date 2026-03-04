@@ -1,103 +1,220 @@
 import React from 'react';
-import { format } from 'date-fns';
 
-interface InvoiceProps {
-  data: any; // ඉන්වොයිස් එකේ දත්ත
-  company: any; // කොම්පැණි එකේ විස්තර
+// ─── Number to Words ──────────────────────────────────────────────────────────
+const numberToWords = (num: number): string => {
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ',
+    'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const format = (n: number) => {
+    if (n < 20) return a[n];
+    return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
+  };
+  let str = '';
+  if (num >= 100000) { str += format(Math.floor(num / 100000)) + 'Lakh '; num %= 100000; }
+  if (num >= 1000)   { str += format(Math.floor(num / 1000)) + 'Thousand '; num %= 1000; }
+  if (num >= 100)    { str += format(Math.floor(num / 100)) + 'Hundred '; num %= 100; }
+  if (num > 0)       str += (str !== '' ? 'and ' : '') + format(num);
+  return str.toUpperCase().trim() + ' RUPEES ONLY';
+};
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+export interface InvoiceItem {
+  inventory_id:      string;
+  name:              string;
+  cases:             number;
+  qty_bottles:       number;
+  units_per_case:    number;
+  unit_price:        number;
+  item_discount_per: number;
+  is_free:           boolean;
+  total:             number;
 }
 
-const InvoiceTemplate = ({ data, company }: InvoiceProps) => {
+export interface InvoiceData {
+  invoiceNo:       string;
+  invoiceDate:     string;
+  vehicleNo:       string;
+  driverName:      string;
+  dispatchNo:      string;
+  customerDetails: any;
+  items:           InvoiceItem[];
+  company:         any;
+  logoUrl?:        string;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+const InvoiceTemplate = ({ invoiceNo, invoiceDate, vehicleNo, driverName, dispatchNo, customerDetails, items, company, logoUrl }: InvoiceData) => {
+
+  const validItems = items.filter(i => i.inventory_id);
+
+  // Totals
+  const totalNet        = validItems.reduce((acc, i) => acc + Number(i.total || 0), 0);
+  const totalCases      = validItems.reduce((acc, i) => acc + Number(i.cases || 0), 0);
+  const totalDiscount   = validItems.reduce((acc, i) => {
+    const upc      = Number(i.units_per_case) || 12;
+    const totalBtl = (Number(i.cases || 0) * upc) + Number(i.qty_bottles || 0);
+    const gross    = (totalBtl / upc) * Number(i.unit_price || 0);
+    return acc + (gross - Number(i.total || 0));
+  }, 0);
+
   return (
-    <div id="invoice-print" className="p-8 bg-white max-w-[800px] mx-auto text-slate-800 font-sans">
-      {/* Header */}
-      <div className="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
-        <div>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-blue-600">
-            {company?.name || 'SMARTBIZ'}
-          </h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-1">
-            {company?.address || 'Your Business Address, Sri Lanka'}
-          </p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            TEL: {company?.phone || '011-XXXXXXX'}
-          </p>
+    <div
+      id="invoice-print-area"
+      style={{
+        width: '210mm',
+        minHeight: '297mm',
+        margin: '0 auto',
+        padding: '10mm 12mm',
+        backgroundColor: '#fff',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '11px',
+        color: '#000',
+        boxSizing: 'border-box',
+      }}
+    >
+      {/* ── HEADER ─────────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6mm' }}>
+        {/* Left: Logo + Company */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {logoUrl && (
+            <img src={logoUrl} alt="Logo" style={{ width: '52px', height: '52px', objectFit: 'contain' }} />
+          )}
+          <div>
+            <div style={{ fontSize: '22px', fontWeight: '900', letterSpacing: '-0.5px', textTransform: 'uppercase' }}>
+              {company?.name || 'EVERMARK LANKA'}
+            </div>
+            <div style={{ fontSize: '9px', color: '#555', textTransform: 'uppercase', marginTop: '2px' }}>
+              {company?.address || 'NEHINNA, DODANGODA, KALUTHARA SOUTH'}
+            </div>
+          </div>
         </div>
-        <div className="text-right">
-          <h2 className="text-2xl font-black uppercase tracking-tight">INVOICE</h2>
-          <p className="text-xs font-bold text-slate-500 uppercase mt-1">#{data.id.slice(0, 8).toUpperCase()}</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
-            {format(new Date(data.created_at), 'yyyy-MM-dd HH:mm')}
-          </p>
+
+        {/* Right: Contact */}
+        <div style={{ textAlign: 'right', fontSize: '10px' }}>
+          <div><strong>TEL:</strong> {company?.phone || '0712315315'}</div>
+          <div><strong>EMAIL:</strong> {company?.email || 'info.funbeverages@gmail.com'}</div>
         </div>
       </div>
 
-      {/* Info Sections */}
-      <div className="grid grid-cols-2 gap-12 mb-10">
-        <div>
-          <h3 className="text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest">Billed To:</h3>
-          <p className="text-sm font-black uppercase">{data.customer_name || 'Cash Customer'}</p>
-          <p className="text-xs text-slate-500">{data.customer_phone || 'N/A'}</p>
+      {/* ── DIVIDER ─────────────────────────────────────────────────────────── */}
+      <hr style={{ borderTop: '2px solid #000', marginBottom: '3mm' }} />
+
+      {/* SALES INVOICE TITLE */}
+      <div style={{ textAlign: 'center', marginBottom: '3mm' }}>
+        <span style={{ fontSize: '14px', fontWeight: '900', letterSpacing: '4px', textTransform: 'uppercase', borderBottom: '2px solid #000', paddingBottom: '2px' }}>SALES INVOICE</span>
+      </div>
+
+      {/* ── INVOICE META ────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3mm', fontSize: '10.5px' }}>
+        <div style={{ lineHeight: '1.8' }}>
+          <div><strong>INV:</strong> {invoiceNo}</div>
+          <div><strong>TO:</strong> MR. {(customerDetails?.full_name || '').toUpperCase()}</div>
+          <div><strong>ADDR:</strong> {customerDetails?.address || 'N/A'}</div>
         </div>
-        <div className="text-right">
-          <h3 className="text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest">Handled By:</h3>
-          <p className="text-sm font-black uppercase">{data.profiles?.full_name || 'Counter Staff'}</p>
+        <div style={{ textAlign: 'right', lineHeight: '1.8' }}>
+          <div><strong>DATE:</strong> {invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-GB').replace(/\//g, '/') : ''}</div>
+          <div><strong>VEHICLE:</strong> {vehicleNo || 'N/A'}</div>
+          <div><strong>DRIVER:</strong> {driverName || 'N/A'}</div>
         </div>
       </div>
 
-      {/* Table */}
-      <table className="w-full mb-10">
+      {/* ── ITEMS TABLE ─────────────────────────────────────────────────────── */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '4mm', fontSize: '10px' }}>
         <thead>
-          <tr className="border-b-2 border-slate-800">
-            <th className="py-3 text-left text-[11px] font-black uppercase tracking-wider">Item Description</th>
-            <th className="py-3 text-center text-[11px] font-black uppercase tracking-wider">Qty (Cs/Btl)</th>
-            <th className="py-3 text-right text-[11px] font-black uppercase tracking-wider">Unit Price</th>
-            <th className="py-3 text-right text-[11px] font-black uppercase tracking-wider">Total</th>
+          <tr style={{ borderBottom: '1.5px solid #000', borderTop: '1.5px solid #000' }}>
+            <th style={{ padding: '3px 4px', textAlign: 'left',   fontWeight: '900', textTransform: 'uppercase' }}>DESCRIPTION</th>
+            <th style={{ padding: '3px 4px', textAlign: 'center', fontWeight: '900', textTransform: 'uppercase', width: '40px' }}>CS</th>
+            <th style={{ padding: '3px 4px', textAlign: 'center', fontWeight: '900', textTransform: 'uppercase', width: '35px' }}>BT</th>
+            <th style={{ padding: '3px 4px', textAlign: 'right',  fontWeight: '900', textTransform: 'uppercase', width: '65px' }}>RATE</th>
+            <th style={{ padding: '3px 4px', textAlign: 'right',  fontWeight: '900', textTransform: 'uppercase', width: '55px' }}>DISC</th>
+            <th style={{ padding: '3px 4px', textAlign: 'right',  fontWeight: '900', textTransform: 'uppercase', width: '75px' }}>TOTAL</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
-          {data.items?.map((item: any, index: number) => (
-            <tr key={index}>
-              <td className="py-4">
-                <p className="text-xs font-black uppercase">{item.name}</p>
-                <p className="text-[9px] text-slate-400 italic">Code: {item.sku || 'N/A'}</p>
+        <tbody>
+          {validItems.map((item, idx) => (
+            <tr key={idx} style={{ borderBottom: '0.5px dotted #ccc' }}>
+              <td style={{ padding: '2.5px 4px' }}>
+                {item.name?.toUpperCase()}
+                {item.is_free ? ' (FREE)' : ''}
               </td>
-              <td className="py-4 text-center text-xs font-bold uppercase">
-                {/* Cases සහ Bottles වෙනම පෙන්වීමට */}
-                {Math.floor(item.quantity / (item.bpc || 12))} Cs {item.quantity % (item.bpc || 12) > 0 ? `+ ${item.quantity % (item.bpc || 12)} Btl` : ''}
+              <td style={{ padding: '2.5px 4px', textAlign: 'center' }}>{item.cases || ''}</td>
+              <td style={{ padding: '2.5px 4px', textAlign: 'center' }}>{item.qty_bottles > 0 ? item.qty_bottles : ''}</td>
+              <td style={{ padding: '2.5px 4px', textAlign: 'right' }}>
+                {item.is_free ? '' : Number(item.unit_price).toFixed(2)}
               </td>
-              <td className="py-4 text-right text-xs font-bold">LKR {item.price?.toLocaleString()}</td>
-              <td className="py-4 text-right text-xs font-black italic">LKR {(item.price * item.quantity).toLocaleString()}</td>
+              <td style={{ padding: '2.5px 4px', textAlign: 'right' }}>
+                {item.item_discount_per > 0 ? `${Number(item.item_discount_per).toFixed(1)}%` : ''}
+              </td>
+              <td style={{ padding: '2.5px 4px', textAlign: 'right', fontWeight: '700' }}>
+                {item.is_free ? '0.00' : Number(item.total).toFixed(2)}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Calculation */}
-      <div className="flex justify-end border-t-2 border-slate-100 pt-6">
-        <div className="w-64 space-y-3">
-          <div className="flex justify-between text-xs font-bold text-slate-500 uppercase">
-            <span>Sub Total</span>
-            <span>LKR {data.sub_total?.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between text-xs font-bold text-red-500 uppercase">
-            <span>Discount</span>
-            <span>- LKR {data.discount_amount?.toLocaleString() || '0.00'}</span>
-          </div>
-          <div className="flex justify-between items-center py-3 border-t border-slate-200">
-            <span className="text-sm font-black uppercase">Grand Total</span>
-            <span className="text-xl font-black italic text-blue-600 underline decoration-double">
-              LKR {data.total_amount?.toLocaleString()}
-            </span>
-          </div>
+      {/* ── WORDS + TOTALS ──────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3mm' }}>
+        <div style={{ fontSize: '9px', fontStyle: 'italic', maxWidth: '60%', fontWeight: '700' }}>
+          WORDS: {numberToWords(Math.round(totalNet))}
+        </div>
+        <div style={{ textAlign: 'right', fontSize: '10px' }}>
+          <span><strong>TOTAL CASES: {totalCases}</strong></span>
+          <span style={{ marginLeft: '12px' }}><strong>TOTAL DISCOUNT: {totalDiscount.toFixed(2)}</strong></span>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="mt-20 text-center border-t border-dashed border-slate-200 pt-8">
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300 italic">
-          Thank You for your Business!
-        </p>
-        <p className="text-[8px] text-slate-300 mt-2">Software by SmartBiz ERP</p>
+      {/* ── NET TOTAL ───────────────────────────────────────────────────────── */}
+      <div style={{ textAlign: 'right', marginBottom: '4mm' }}>
+        <span style={{ fontSize: '18px', fontWeight: '900', letterSpacing: '-0.5px' }}>
+          NET TOTAL: LKR {totalNet.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+        </span>
+      </div>
+
+      <hr style={{ borderTop: '1px solid #000', marginBottom: '3mm' }} />
+
+      {/* ── PAYMENT NOTE ────────────────────────────────────────────────────── */}
+      <div style={{ fontSize: '9px', marginBottom: '8mm' }}>
+        PAYMENT SHOULD BE MADE WITH IN THE CREDIT PERIOD INDICATED ABOVE, ALL THE CHEQUES SHOULD BE DRAWN IN FAVOUR OF {(company?.name || 'EVERMARK LANKA').toUpperCase()}.
+      </div>
+
+      {/* ── SIGNATURE SECTION ───────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4mm', gap: '8px' }}>
+        {['CHECKED BY', 'GOODS ISSUED BY', 'APPROVED BY'].map(label => (
+          <div key={label} style={{ flex: 1, borderTop: '1px solid #000', paddingTop: '4px', textAlign: 'center', fontSize: '9px', fontWeight: '700' }}>
+            {label}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: '9px', marginBottom: '6mm' }}>
+        <div>CUSTOMER NAME : .................................................... NIC NO : .....................................</div>
+        <div style={{ marginTop: '4px', fontStyle: 'italic' }}>we received above goods in good order &amp; condition</div>
+      </div>
+
+      {/* ── CUSTOMER SIGNATURE ──────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4mm' }}>
+        <div style={{ borderTop: '1px solid #000', width: '140px', textAlign: 'center', paddingTop: '3px', fontSize: '9px', fontWeight: '700' }}>
+          CUSTOMER SIGNATURE
+        </div>
+      </div>
+
+      {/* ── NOTES ───────────────────────────────────────────────────────────── */}
+      <div style={{ fontSize: '8.5px', marginBottom: '4mm', lineHeight: '1.6' }}>
+        <div>NOTE: POST DATED CHEQUES ARE SUBJECT TO REALIZATION. IF YOUR FIND ANY DISCREPANCY IN THE BALANCE VERIFY WITHIN 7 DAYS.</div>
+        <div><strong>**ONLY 1% ACCEPTING MARKET RETURNS FROM MONTHLY TURN OVER AND, WE ARE NOT ACCEPTING SODA 350ML,750ML AS MARKET RETURNS GOODS***</strong></div>
+      </div>
+
+      {/* ── TRANSPORTER BOX ─────────────────────────────────────────────────── */}
+      <div style={{ border: '1px solid #000', padding: '6px 8px', fontSize: '9px' }}>
+        <div style={{ display: 'flex', gap: '40px', marginBottom: '6px' }}>
+          <span>TRANSPORTER NAME : .............................</span>
+          <span>ID NO : .............................</span>
+        </div>
+        <div style={{ display: 'flex', gap: '40px' }}>
+          <span>SIGNATURE : .............................</span>
+          <span>PHONE NO : .............................</span>
+        </div>
       </div>
     </div>
   );

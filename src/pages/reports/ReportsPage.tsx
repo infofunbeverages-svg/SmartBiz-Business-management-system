@@ -1,246 +1,586 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
-import TableView from '../../components/common/TableView';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Link } from 'react-router-dom';
-import { 
-  Printer, FileSpreadsheet, RefreshCcw, Filter, Box, 
-  ArrowUpRight, ArrowDownLeft, RotateCcw, 
-  LayoutDashboard, ShoppingCart, Banknote, History, Plus, Wallet,
-  ZoomIn, ZoomOut
-} from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { useCompany } from '../../utils/useCompany';
+import * as XLSX from 'xlsx';
+import {
+  FileSpreadsheet, Printer, Download, RefreshCcw, ChevronRight,
+  Package, Truck, ShoppingCart, Users, BarChart2, RotateCcw, Loader2
+} from 'lucide-react';
 
-// Module Types
-type ReportModule = 'INVENTORY' | 'SALES' | 'EXPENSES' | 'RETURNS';
+// ── Report definitions ────────────────────────────────────────────────────────
+const GROUPS = [
+  {
+    id: 'INVENTORY', label: 'Inventory', icon: Package, color: 'blue',
+    reports: [
+      { id: 'inventory_stock',  label: 'Inventory Stock'          },
+      { id: 'stock_movement',   label: 'Stock Movement'           },
+      { id: 'grn_list',         label: 'GRN List'                 },
+      { id: 'raw_material_grn', label: 'Raw Material GRN'         },
+      { id: 'supplier_goods',   label: 'Supplier Wise Received'   },
+    ]
+  },
+  {
+    id: 'RETURNS', label: 'Returns & Damages', icon: RotateCcw, color: 'red',
+    reports: [
+      { id: 'market_return',  label: 'Market Return'  },
+      { id: 'goods_return',   label: 'Goods Return'   },
+      { id: 'damage_return',  label: 'Damage Return'  },
+      { id: 'sample_report',  label: 'Sample Report'  },
+    ]
+  },
+  {
+    id: 'SALES', label: 'Sales', icon: ShoppingCart, color: 'green',
+    reports: [
+      { id: 'invoice_list', label: 'Invoice List'      },
+      { id: 'sales_report', label: 'Sales Report'      },
+      { id: 'free_issue',   label: 'Free Issue Report' },
+    ]
+  },
+  {
+    id: 'CUSTOMERS', label: 'Customers', icon: Users, color: 'purple',
+    reports: [
+      { id: 'customer_ledger',  label: 'Customer Wise Ledger'      },
+      { id: 'outstanding',      label: 'All Customer Outstanding'  },
+      { id: 'payment_returns',  label: 'Payment & Returns Report'  },
+    ]
+  },
+  {
+    id: 'TRANSPORT', label: 'Transport', icon: Truck, color: 'orange',
+    reports: [
+      { id: 'transport_payment', label: 'Transport Payment Report' },
+    ]
+  },
+];
 
-const ReportsPage = () => {
+const COLORS: Record<string, any> = {
+  blue:   { sidebar: 'bg-blue-50 text-blue-700 border-blue-300',   active: 'bg-blue-600 text-white',   badge: 'bg-blue-100 text-blue-700',   header: 'bg-blue-50 border-blue-200 text-blue-800'   },
+  red:    { sidebar: 'bg-red-50 text-red-700 border-red-300',      active: 'bg-red-600 text-white',    badge: 'bg-red-100 text-red-700',     header: 'bg-red-50 border-red-200 text-red-800'     },
+  green:  { sidebar: 'bg-green-50 text-green-700 border-green-300',active: 'bg-green-600 text-white',  badge: 'bg-green-100 text-green-700', header: 'bg-green-50 border-green-200 text-green-800'},
+  purple: { sidebar: 'bg-purple-50 text-purple-700 border-purple-300',active:'bg-purple-600 text-white',badge:'bg-purple-100 text-purple-700',header:'bg-purple-50 border-purple-200 text-purple-800'},
+  orange: { sidebar: 'bg-orange-50 text-orange-700 border-orange-300',active:'bg-orange-600 text-white',badge:'bg-orange-100 text-orange-700',header:'bg-orange-50 border-orange-200 text-orange-800'},
+};
+
+const today      = new Date().toISOString().split('T')[0];
+const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+export default function ReportsPage() {
   const { company } = useCompany();
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeModule, setActiveModule] = useState<ReportModule>('INVENTORY');
-  const [returnCustomerFilter, setReturnCustomerFilter] = useState('');
-  const [customers, setCustomers] = useState<any[]>([]);
-  
-  const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
-  });
-  const [pageZoom, setPageZoom] = useState(100);
-  const zoomOptions = [80, 90, 100, 110, 125];
 
-  const fetchData = useCallback(async () => {
+  const [activeGroup,    setActiveGroup]    = useState('INVENTORY');
+  const [activeReport,   setActiveReport]   = useState('inventory_stock');
+  const [dateStart,      setDateStart]      = useState(monthStart);
+  const [dateEnd,        setDateEnd]        = useState(today);
+  const [custFilter,     setCustFilter]     = useState('');
+  const [suppFilter,     setSuppFilter]     = useState('');
+  const [data,           setData]           = useState<any[]>([]);
+  const [loading,        setLoading]        = useState(false);
+  const [customers,      setCustomers]      = useState<any[]>([]);
+  const [suppliers,      setSuppliers]      = useState<any[]>([]);
+  const [filtersLoaded,  setFiltersLoaded]  = useState(false);
+  const [hasRun,         setHasRun]         = useState(false);
+
+  const cg = GROUPS.find(g => g.id === activeGroup)!;
+  const cr = cg.reports.find(r => r.id === activeReport)!;
+  const cl = COLORS[cg.color];
+
+  const loadFilters = async () => {
+    if (filtersLoaded || !company) return;
+    const [c, s] = await Promise.all([
+      supabase.from('customers').select('id, full_name').eq('company_id', company.id).order('full_name'),
+      supabase.from('suppliers').select('id, name').eq('company_id', company.id).order('name'),
+    ]);
+    setCustomers(c.data || []);
+    setSuppliers(s.data || []);
+    setFiltersLoaded(true);
+  };
+
+  const fetchReport = useCallback(async () => {
     if (!company) return;
+    await loadFilters();
     setLoading(true);
+    setHasRun(true);
+    const cid = company.id;
+    const ds  = dateStart + 'T00:00:00';
+    const de  = dateEnd   + 'T23:59:59';
+
     try {
-      let query: any;
-      
-      if (activeModule === 'INVENTORY') {
-        query = supabase.from('stock_movements').select(`*, inventory:product_id (name, bottles_per_case)`);
-      } else if (activeModule === 'SALES') {
-        query = supabase.from('sales_invoices').select(`*, customer:customer_id (full_name)`);
-      } else if (activeModule === 'EXPENSES') {
-        query = supabase.from('expenses').select(`*`);
-      } else if (activeModule === 'RETURNS') {
-        query = supabase.from('stock_movements').select(`*, inventory:product_id (name), customers:customer_id (full_name, name)`).in('type', ['RETURN', 'MARKET_RETURN', 'DAMAGE_RETURN', 'SAMPLE', 'PACK_DAMAGE']);
-        if (returnCustomerFilter) query = query.eq('customer_id', returnCustomerFilter);
+      let rows: any[] = [];
+
+      // ── INVENTORY ──────────────────────────────────────────────────────────
+      if (activeReport === 'inventory_stock') {
+        const { data: d } = await supabase.from('inventory').select('name, sku, bottles_per_case, quantity, price').eq('company_id', cid).order('name');
+        rows = (d || []).map((i, n) => ({
+          '#':            n + 1,
+          'Product':      i.name,
+          'SKU':          i.sku || '-',
+          'BPC':          i.bottles_per_case || 12,
+          'Cases':        Math.floor((i.quantity || 0) / (i.bottles_per_case || 12)),
+          'Bottles':      (i.quantity || 0) % (i.bottles_per_case || 12),
+          'Total Bottles':i.quantity || 0,
+          'Price/CS':     i.price || 0,
+          'Stock Value':  Math.round(((i.quantity || 0) / (i.bottles_per_case || 12)) * (i.price || 0)),
+        }));
       }
 
-      const { data: result, error } = await query
-        .eq('company_id', company.id)
-        .gte('created_at', dateRange.start + 'T00:00:00')
-        .lte('created_at', dateRange.end + 'T23:59:59')
-        .order('created_at', { ascending: false });
+      else if (activeReport === 'stock_movement') {
+        const { data: d } = await supabase.from('stock_movements')
+          .select('created_at, type, quantity, notes, inventory:product_id(name, bottles_per_case), customers:customer_id(full_name)')
+          .eq('company_id', cid).gte('created_at', ds).lte('created_at', de).order('created_at', { ascending: false });
+        rows = (d || []).map((i, n) => ({
+          '#':         n + 1,
+          'Date':      i.created_at?.split('T')[0],
+          'Product':   i.inventory?.name || '-',
+          'Type':      i.type || '-',
+          'Customer':  i.customers?.full_name || '-',
+          'Cases':     Math.floor(Math.abs(i.quantity || 0) / (i.inventory?.bottles_per_case || 12)),
+          'Bottles':   Math.abs(i.quantity || 0) % (i.inventory?.bottles_per_case || 12),
+          'Qty (Btl)': i.quantity || 0,
+          'Notes':     i.notes || '-',
+        }));
+      }
 
-      if (error) throw error;
-      setData(result || []);
-    } catch (err) {
-      console.error("Fetch error:", err);
+      else if (activeReport === 'grn_list') {
+        const { data: d } = await supabase.from('grn_master')
+          .select('grn_date, grn_no, bill_no, total_amount, suppliers(name)')
+          .eq('company_id', cid).gte('grn_date', dateStart).lte('grn_date', dateEnd).order('grn_date', { ascending: false });
+        rows = (d || []).map((g, n) => ({
+          '#':        n + 1,
+          'Date':     g.grn_date,
+          'GRN No':   g.grn_no,
+          'Supplier': g.suppliers?.name || '-',
+          'Bill No':  g.bill_no || '-',
+          'Total':    g.total_amount || 0,
+        }));
+      }
+
+      else if (activeReport === 'raw_material_grn') {
+        const { data: d } = await supabase.from('raw_material_grn_master')
+          .select('grn_date, grn_no, bill_no, total_amount, suppliers(name)')
+          .eq('company_id', cid).gte('grn_date', dateStart).lte('grn_date', dateEnd).order('grn_date', { ascending: false });
+        rows = (d || []).map((g, n) => ({
+          '#':        n + 1,
+          'Date':     g.grn_date,
+          'GRN No':   g.grn_no,
+          'Supplier': g.suppliers?.name || '-',
+          'Bill No':  g.bill_no || '-',
+          'Total':    g.total_amount || 0,
+        }));
+      }
+
+      else if (activeReport === 'supplier_goods') {
+        let q = supabase.from('grn_master')
+          .select('grn_date, grn_no, suppliers(name), grn_items(quantity, unit_price, total_price, inventory:product_id(name))')
+          .eq('company_id', cid).gte('grn_date', dateStart).lte('grn_date', dateEnd);
+        if (suppFilter) q = q.eq('supplier_id', suppFilter);
+        const { data: d } = await q.order('grn_date', { ascending: false });
+        let n = 0;
+        rows = (d || []).flatMap(g =>
+          (g.grn_items || []).map((item: any) => ({
+            '#':          ++n,
+            'Date':       g.grn_date,
+            'GRN No':     g.grn_no,
+            'Supplier':   g.suppliers?.name || '-',
+            'Product':    item.inventory?.name || '-',
+            'Qty (Btl)':  item.quantity || 0,
+            'Unit Price': item.unit_price || 0,
+            'Subtotal':   item.total_price || Math.round(((item.quantity || 0) / 12) * (item.unit_price || 0)),
+          }))
+        );
+      }
+
+      // ── RETURNS ────────────────────────────────────────────────────────────
+      else if (['market_return','goods_return','damage_return','sample_report'].includes(activeReport)) {
+        const typeMap: Record<string, string> = {
+          market_return: 'MARKET_RETURN', goods_return: 'RETURN',
+          damage_return: 'DAMAGE_RETURN', sample_report: 'SAMPLE',
+        };
+        const { data: d } = await supabase.from('stock_movements')
+          .select('created_at, quantity, notes, inventory:product_id(name, bottles_per_case), customers:customer_id(full_name)')
+          .eq('company_id', cid).eq('type', typeMap[activeReport])
+          .gte('created_at', ds).lte('created_at', de).order('created_at', { ascending: false });
+        rows = (d || []).map((i, n) => ({
+          '#':         n + 1,
+          'Date':      i.created_at?.split('T')[0],
+          'Product':   i.inventory?.name || '-',
+          'Customer':  i.customers?.full_name || '-',
+          'Cases':     Math.floor(Math.abs(i.quantity || 0) / (i.inventory?.bottles_per_case || 12)),
+          'Bottles':   Math.abs(i.quantity || 0) % (i.inventory?.bottles_per_case || 12),
+          'Qty (Btl)': Math.abs(i.quantity || 0),
+          'Notes':     i.notes || '-',
+        }));
+      }
+
+      // ── SALES ──────────────────────────────────────────────────────────────
+      else if (['invoice_list','sales_report'].includes(activeReport)) {
+        const { data: d } = await supabase.from('invoices')
+          .select('created_at, invoice_no, vehicle_no, total_amount, customers(full_name, sales_area)')
+          .eq('company_id', cid).gte('created_at', ds).lte('created_at', de).order('created_at', { ascending: false });
+        rows = (d || []).map((i, n) => ({
+          '#':         n + 1,
+          'Date':      i.created_at?.split('T')[0],
+          'Invoice No':i.invoice_no,
+          'Customer':  i.customers?.full_name || '-',
+          'Area':      i.customers?.sales_area || '-',
+          'Vehicle':   i.vehicle_no || '-',
+          'Amount':    i.total_amount || 0,
+        }));
+      }
+
+      else if (activeReport === 'free_issue') {
+        const { data: d } = await supabase.from('invoice_items')
+          .select('cases, qty_bottles, inventory:inventory_id(name), invoices!inner(invoice_no, created_at, company_id, customers(full_name))')
+          .eq('is_free', true).eq('invoices.company_id', cid)
+          .gte('invoices.created_at', ds).lte('invoices.created_at', de);
+        rows = (d || []).map((i: any, n: number) => ({
+          '#':         n + 1,
+          'Date':      i.invoices?.created_at?.split('T')[0],
+          'Invoice No':i.invoices?.invoice_no,
+          'Customer':  i.invoices?.customers?.full_name || '-',
+          'Product':   i.inventory?.name || '-',
+          'Cases':     i.cases || 0,
+          'Bottles':   i.qty_bottles || 0,
+        }));
+      }
+
+      // ── CUSTOMERS ──────────────────────────────────────────────────────────
+      else if (activeReport === 'customer_ledger') {
+        let q = supabase.from('customer_ledger')
+          .select('date, type, reference, description, debit, credit, status, customers(full_name)')
+          .gte('date', dateStart).lte('date', dateEnd);
+        if (custFilter) q = q.eq('customer_id', custFilter);
+        else {
+          // Get customer IDs for this company
+          const { data: cc } = await supabase.from('customers').select('id').eq('company_id', cid);
+          const ids = (cc || []).map((c: any) => c.id);
+          if (ids.length > 0) q = q.in('customer_id', ids);
+        }
+        const { data: d } = await q.order('date', { ascending: false });
+        rows = (d || []).map((l, n) => ({
+          '#':           n + 1,
+          'Date':        l.date,
+          'Customer':    l.customers?.full_name || '-',
+          'Type':        l.type || '-',
+          'Reference':   l.reference || '-',
+          'Description': l.description || '-',
+          'Debit':       l.debit  > 0 ? l.debit  : '-',
+          'Credit':      l.credit > 0 ? l.credit : '-',
+          'Status':      l.status || '-',
+        }));
+      }
+
+      else if (activeReport === 'outstanding') {
+        const { data: custs } = await supabase.from('customers').select('id, full_name, sales_area, phone').eq('company_id', cid).order('full_name');
+        const ids = (custs || []).map((c: any) => c.id);
+        const { data: ledger } = ids.length > 0
+          ? await supabase.from('customer_ledger').select('customer_id, debit, credit').in('customer_id', ids)
+          : { data: [] };
+        const bal: Record<string, number> = {};
+        (ledger || []).forEach((l: any) => { bal[l.customer_id] = (bal[l.customer_id] || 0) + Number(l.debit || 0) - Number(l.credit || 0); });
+        rows = (custs || [])
+          .map(c => ({ ...c, balance: bal[c.id] || 0 }))
+          .filter(c => Math.abs(c.balance) > 0)
+          .sort((a, b) => b.balance - a.balance)
+          .map((c, n) => ({
+            '#':           n + 1,
+            'Customer':    c.full_name,
+            'Area':        c.sales_area || '-',
+            'Phone':       c.phone || '-',
+            'Outstanding': Math.round(Math.abs(c.balance)),
+            'Status':      c.balance > 0 ? 'Due' : 'Credit',
+          }));
+      }
+
+      else if (activeReport === 'payment_returns') {
+        const { data: d } = await supabase.from('customer_payments')
+          .select('created_at, payment_type, reference_no, amount, status, customers(full_name)')
+          .eq('company_id', cid).gte('created_at', ds).lte('created_at', de).order('created_at', { ascending: false });
+        rows = (d || []).map((p, n) => ({
+          '#':          n + 1,
+          'Date':       p.created_at?.split('T')[0],
+          'Customer':   p.customers?.full_name || '-',
+          'Type':       p.payment_type || '-',
+          'Reference':  p.reference_no || '-',
+          'Amount':     p.amount || 0,
+          'Status':     p.status || '-',
+        }));
+      }
+
+      // ── TRANSPORT ──────────────────────────────────────────────────────────
+      else if (activeReport === 'transport_payment') {
+        const { data: d } = await supabase.from('transport_log')
+          .select('trip_date, total_distance, rate_per_km, fuel_cost, hire_cost, advance_paid, description, transport_vehicles(vehicle_no), transport_drivers(driver_name)')
+          .eq('company_id', cid).gte('trip_date', dateStart).lte('trip_date', dateEnd).order('trip_date', { ascending: false });
+        rows = (d || []).map((t, n) => ({
+          '#':             n + 1,
+          'Date':          t.trip_date,
+          'Vehicle':       t.transport_vehicles?.vehicle_no || '-',
+          'Driver':        t.transport_drivers?.driver_name || '-',
+          'Distance (km)': t.total_distance || 0,
+          'Rate/km':       t.rate_per_km || 0,
+          'Fuel Cost':     t.fuel_cost || 0,
+          'Hire Cost':     t.hire_cost || 0,
+          'Advance Paid':  t.advance_paid || 0,
+          'Description':   t.description || '-',
+        }));
+      }
+
+      setData(rows);
+    } catch (err: any) {
+      console.error('Report error:', err);
+      alert('Error: ' + err.message);
     } finally {
       setLoading(false);
     }
-  }, [company, dateRange, activeModule]);
+  }, [company, activeReport, dateStart, dateEnd, custFilter, suppFilter]);
 
-  useEffect(() => {
-    if (company && activeModule === 'RETURNS') {
-      supabase.from('customers').select('id, full_name, name').eq('company_id', company.id).order('full_name').then(({ data }) => setCustomers(data || []));
-    }
-  }, [company, activeModule]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Excel Export Logic
-  const exportToExcel = () => {
-    const exportData = data.map(item => ({
-      Date: new Date(item.created_at).toLocaleDateString(),
-      ...(activeModule === 'INVENTORY' && { Product: item.inventory?.name, Type: item.type, Qty: item.quantity }),
-      ...(activeModule === 'SALES' && { Customer: item.customer?.full_name, Amount: item.total_net_amount }),
-      ...(activeModule === 'EXPENSES' && { Category: item.category, Description: item.description, Amount: item.amount }),
-      Note: item.note || ''
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
+  // ── Exports ────────────────────────────────────────────────────────────────
+  const exportExcel = () => {
+    if (!data.length) return;
+    const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Report");
-    XLSX.writeFile(wb, `${activeModule}_Report_${dateRange.start}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, cr.label.slice(0, 31));
+    XLSX.writeFile(wb, `${cr.label}_${dateStart}_to_${dateEnd}.xlsx`);
   };
 
+  const exportCSV = () => {
+    if (!data.length) return;
+    const headers = Object.keys(data[0]);
+    const csv = [headers.join(','), ...data.map(r => headers.map(h => `"${r[h] ?? ''}"`).join(','))].join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = `${cr.label}_${dateStart}_to_${dateEnd}.csv`;
+    a.click();
+  };
+
+  const cols = data.length > 0 ? Object.keys(data[0]) : [];
+
+  // Auto-sum numeric columns for footer
+  const totals = cols.reduce((acc, col) => {
+    if (col === '#') return acc;
+    const allNum = data.every(r => typeof r[col] === 'number');
+    if (allNum) acc[col] = data.reduce((s, r) => s + (r[col] || 0), 0);
+    return acc;
+  }, {} as Record<string, number>);
+
+  const hasTotals = Object.keys(totals).length > 0;
+
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 min-h-screen bg-slate-50/50">
-      
-      {/* --- HEADER SECTION --- */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6 no-print">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-black uppercase italic tracking-tighter flex items-center gap-2 text-slate-800">
-            <LayoutDashboard className="text-blue-600" size={28} /> {activeModule} <span className="text-blue-600">REPORTS</span>
-          </h1>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Date Range: {dateRange.start} to {dateRange.end}</p>
-        </div>
+    <div className="min-h-screen bg-gray-50 print:bg-white">
 
-        <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
-          {/* Zoom: Report / Page zoom control */}
-          <div className="flex items-center gap-1 sm:gap-2 bg-white border border-slate-200 rounded-xl px-2 py-1.5 shadow-sm">
-            <ZoomOut size={18} className="text-slate-500 flex-shrink-0" />
-            <select 
-              value={pageZoom} 
-              onChange={(e) => setPageZoom(Number(e.target.value))}
-              className="text-xs font-bold bg-transparent border-none py-2 pr-1 focus:ring-0 cursor-pointer min-h-[44px] sm:min-h-0"
-            >
-              {zoomOptions.map((z) => (
-                <option key={z} value={z}>{z}%</option>
-              ))}
-            </select>
-            <ZoomIn size={18} className="text-slate-500 flex-shrink-0" />
+      {/* ── PRINT HEADER ── */}
+      <div className="hidden print:block mb-6 pb-4 border-b-2 border-gray-900">
+        <h1 className="text-2xl font-black uppercase">{cr.label}</h1>
+        <p className="text-sm text-gray-500 mt-1">Period: {dateStart} → {dateEnd} &nbsp;|&nbsp; Generated: {today}</p>
+      </div>
+
+      {/* ── SCREEN UI ── */}
+      <div className="print:hidden flex flex-col h-screen">
+
+        {/* Top Bar */}
+        <div className="bg-white border-b px-6 py-3 flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-lg font-black text-gray-900 uppercase tracking-tight">📊 System Reports</h1>
+            </div>
           </div>
-          {activeModule === 'RETURNS' && (
-            <>
-              <Link to="/inventory/returns" className="flex items-center gap-2 bg-orange-600 text-white px-5 py-2.5 rounded-2xl hover:bg-orange-700 transition shadow-lg font-bold text-xs uppercase">
-                <Plus size={18} /> Add Return / Damage
-              </Link>
-              <Link to="/finance/ledger" className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-2xl hover:bg-blue-700 transition shadow-lg font-bold text-xs uppercase">
-                <Wallet size={18} /> View Ledger
-              </Link>
-            </>
-          )}
-          <button type="button" onClick={exportToExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-4 sm:px-5 py-3 sm:py-2.5 rounded-2xl hover:bg-emerald-700 transition shadow-lg font-bold text-xs uppercase min-h-[44px] sm:min-h-0">
-            <FileSpreadsheet size={18} /> Excel
-          </button>
-          <button type="button" onClick={() => window.print()} className="flex items-center gap-2 bg-slate-900 text-white px-4 sm:px-5 py-3 sm:py-2.5 rounded-2xl hover:bg-black transition shadow-lg font-bold text-xs uppercase min-h-[44px] sm:min-h-0">
-            <Printer size={18} /> Print
-          </button>
-        </div>
-      </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="text-[10px] font-black text-gray-400 uppercase">From</label>
+            <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)}
+              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:border-blue-400" />
+            <label className="text-[10px] font-black text-gray-400 uppercase">To</label>
+            <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)}
+              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:border-blue-400" />
 
-      {/* --- MODULE TABS --- */}
-      <div className="flex gap-3 no-print overflow-x-auto pb-2">
-        {[
-          { id: 'INVENTORY', label: 'Inventory', icon: <Box size={16}/> },
-          { id: 'SALES', label: 'Sales', icon: <ShoppingCart size={16}/> },
-          { id: 'RETURNS', label: 'Returns', icon: <RotateCcw size={16}/> },
-          { id: 'EXPENSES', label: 'Expenses', icon: <Banknote size={16}/> },
-        ].map((tab) => (
-          <button 
-            key={tab.id}
-            onClick={() => setActiveModule(tab.id as ReportModule)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-xs uppercase transition-all whitespace-nowrap ${
-              activeModule === tab.id ? 'bg-blue-600 text-white shadow-xl translate-y-[-2px]' : 'bg-white text-slate-400 hover:bg-slate-100'
-            }`}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
-      </div>
+            {/* Filters */}
+            {activeReport === 'customer_ledger' && (
+              <select value={custFilter} onChange={e => setCustFilter(e.target.value)}
+                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-blue-400">
+                <option value="">All Customers</option>
+                {customers.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+              </select>
+            )}
+            {activeReport === 'supplier_goods' && (
+              <select value={suppFilter} onChange={e => setSuppFilter(e.target.value)}
+                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-blue-400">
+                <option value="">All Suppliers</option>
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            )}
 
-      {/* --- FILTERS --- */}
-      <Card className="border-none shadow-sm rounded-[2rem] no-print bg-white">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="flex-1 w-full">
-              <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">{activeModule === 'RETURNS' ? 'Date Range & Customer' : 'Select Date Range'}</label>
-              <div className="flex flex-wrap items-center gap-3">
-                <input type="date" className="flex-1 bg-slate-50 border-none rounded-xl p-3 text-xs font-bold focus:ring-2 focus:ring-blue-500" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} />
-                <span className="text-slate-300 font-bold text-xs">TO</span>
-                <input type="date" className="flex-1 bg-slate-50 border-none rounded-xl p-3 text-xs font-bold focus:ring-2 focus:ring-blue-500" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} />
-                {activeModule === 'RETURNS' && (
-                  <select className="p-3 bg-slate-50 rounded-xl text-xs font-bold min-w-[200px]" value={returnCustomerFilter} onChange={(e) => setReturnCustomerFilter(e.target.value)}>
-                    <option value="">All Customers</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.full_name || c.name}</option>)}
-                  </select>
-                )}
-                <button onClick={fetchData} className="p-3 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all">
-                  <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
+            <button onClick={fetchReport} disabled={loading}
+              className="flex items-center gap-2 px-5 py-2 bg-gray-900 text-white rounded-xl text-sm font-black uppercase hover:bg-gray-700 transition-colors disabled:opacity-50">
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />}
+              Run Report
+            </button>
+
+            {data.length > 0 && (
+              <>
+                <button onClick={exportExcel} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700">
+                  <FileSpreadsheet size={13} /> Excel
                 </button>
-              </div>
-            </div>
-            <div className="bg-blue-50 p-5 px-8 rounded-[2rem] border border-blue-100 hidden md:block text-center">
-              <p className="text-[10px] font-black text-blue-400 uppercase">Total Records</p>
-              <p className="text-2xl font-black text-blue-700">{data.length}</p>
-            </div>
+                <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700">
+                  <Download size={13} /> CSV
+                </button>
+                <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-2 bg-gray-700 text-white rounded-xl text-xs font-black hover:bg-gray-800">
+                  <Printer size={13} /> Print
+                </button>
+              </>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* --- REPORT TABLE (zoom applied for mobile/desktop) --- */}
-      <div 
-        className="origin-top-left"
-        style={{ 
-          transform: `scale(${pageZoom / 100})`,
-          transformOrigin: 'top left',
-          width: pageZoom === 100 ? '100%' : `${(100 / pageZoom) * 100}%`,
-          minHeight: pageZoom === 100 ? undefined : `${(100 / pageZoom) * 100}vh`,
-        }}
-      >
-        <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white print:shadow-none">
-          <CardContent className="p-0">
-          {loading ? (
-            <div className="text-center py-32">
-              <div className="animate-spin inline-block w-10 h-10 border-[3px] border-blue-600 border-t-transparent rounded-full mb-4"></div>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Synchronizing Data...</p>
+        {/* Body */}
+        <div className="flex flex-1 overflow-hidden">
+
+          {/* Sidebar */}
+          <div className="w-60 bg-white border-r overflow-y-auto flex-shrink-0">
+            {GROUPS.map(group => {
+              const GIcon   = group.icon;
+              const gc      = COLORS[group.color];
+              const isGrp   = group.id === activeGroup;
+              return (
+                <div key={group.id}>
+                  <button
+                    onClick={() => {
+                      setActiveGroup(group.id);
+                      setActiveReport(group.reports[0].id);
+                      setData([]); setHasRun(false);
+                      loadFilters();
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-4 py-3 border-b text-left transition-all
+                      ${isGrp ? gc.sidebar + ' border-l-4' : 'text-gray-600 hover:bg-gray-50 border-gray-100 border-l-4 border-l-transparent'}`}
+                  >
+                    <GIcon size={15} />
+                    <span className="font-black text-xs uppercase tracking-wide flex-1">{group.label}</span>
+                    <ChevronRight size={11} className={`transition-transform ${isGrp ? 'rotate-90' : ''}`} />
+                  </button>
+                  {isGrp && group.reports.map(rpt => (
+                    <button key={rpt.id}
+                      onClick={() => { setActiveReport(rpt.id); setData([]); setHasRun(false); }}
+                      className={`w-full flex items-center gap-2 pl-8 pr-4 py-2.5 text-left text-xs font-bold border-b border-gray-50 transition-all
+                        ${rpt.id === activeReport ? gc.active : 'text-gray-500 hover:bg-gray-50'}`}
+                    >
+                      <span className="w-1 h-1 rounded-full bg-current flex-shrink-0" />
+                      {rpt.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Main */}
+          <div className="flex-1 overflow-auto p-5">
+
+            {/* Report Header */}
+            <div className={`rounded-2xl p-4 mb-4 border-2 flex items-center justify-between ${cl.header}`}>
+              <div>
+                <h2 className="text-base font-black uppercase tracking-tight">{cr.label}</h2>
+                <p className="text-xs font-bold opacity-60 mt-0.5">{dateStart} → {dateEnd}</p>
+              </div>
+              {data.length > 0 && (
+                <span className={`text-[10px] font-black px-3 py-1.5 rounded-full ${cl.badge}`}>
+                  {data.length} records
+                </span>
+              )}
             </div>
-          ) : (
-            <TableView 
-              data={data}
-              columns={
-                activeModule === 'INVENTORY' || activeModule === 'RETURNS' ? [
-                  { header: 'Date', cell: (r: any) => <span className="text-[10px] font-bold">{new Date(r.created_at).toLocaleDateString()}</span> },
-                  { header: 'Product', cell: (r: any) => <span className="font-black text-slate-800 uppercase italic">{r.inventory?.name}</span> },
-                  { header: 'Type', cell: (r: any) => <span className={`text-[9px] font-black px-2 py-1 rounded ${r.type === 'MARKET_RETURN' ? 'bg-orange-100 text-orange-700' : r.type === 'DAMAGE_RETURN' ? 'bg-red-100 text-red-700' : r.type === 'SAMPLE' ? 'bg-purple-100 text-purple-700' : r.type === 'PACK_DAMAGE' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100'}`}>{r.type?.replace('_', ' ')}</span> },
-                  { header: 'Customer', cell: (r: any) => <span className="text-[10px] font-bold text-slate-600">{r.customers?.full_name || r.customers?.name || '-'}</span> },
-                  { header: 'Qty', cell: (r: any) => <span className={`font-black ${r.quantity > 0 ? 'text-emerald-600' : 'text-red-500'}`}>{r.quantity} Btl</span> },
-                  { header: 'Note', cell: (r: any) => <span className="text-[10px] text-slate-500 uppercase">{r.note || '-'}</span> },
-                ] : activeModule === 'SALES' ? [
-                  { header: 'Date', cell: (r: any) => <span className="text-[10px] font-bold">{new Date(r.created_at).toLocaleDateString()}</span> },
-                  { header: 'Invoice #', cell: (r: any) => <span className="font-bold text-blue-600">#{r.id.slice(0,8).toUpperCase()}</span> },
-                  { header: 'Customer', cell: (r: any) => <span className="font-black text-slate-800 uppercase">{r.customer?.full_name || 'CASH'}</span> },
-                  { header: 'Net Total', cell: (r: any) => <span className="font-black text-slate-900">LKR {r.total_net_amount?.toLocaleString()}</span> },
-                ] : [
-                  // Expenses
-                  { header: 'Date', cell: (r: any) => <span className="text-[10px] font-bold">{new Date(r.created_at).toLocaleDateString()}</span> },
-                  { header: 'Category', cell: (r: any) => <span className="font-black uppercase text-slate-700">{r.category}</span> },
-                  { header: 'Description', cell: (r: any) => <span className="text-[10px] uppercase text-slate-500">{r.description}</span> },
-                  { header: 'Amount', cell: (r: any) => <span className="font-black text-red-600">LKR {r.amount?.toLocaleString()}</span> },
-                ]
-              }
-            />
-          )}
-        </CardContent>
-      </Card>
+
+            {/* Content */}
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-64 gap-3">
+                <Loader2 size={36} className="animate-spin text-gray-300" />
+                <p className="text-sm font-bold text-gray-400">Loading data...</p>
+              </div>
+            ) : !hasRun ? (
+              <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-400">
+                <BarChart2 size={48} className="opacity-20" />
+                <p className="font-black text-base">Select date range and click Run Report</p>
+                <p className="text-sm">Showing: <strong className="text-gray-600">{cr.label}</strong></p>
+              </div>
+            ) : data.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-400">
+                <BarChart2 size={48} className="opacity-20" />
+                <p className="font-black text-base">No data found</p>
+                <p className="text-sm">Try a different date range</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                <div className="overflow-auto max-h-[calc(100vh-260px)]">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="bg-gray-900 text-white">
+                        {cols.map(col => (
+                          <th key={col} className="px-3 py-3 text-left text-[10px] font-black uppercase tracking-wide whitespace-nowrap border-r border-gray-700 last:border-0">
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.map((row, i) => (
+                        <tr key={i} className={`border-b border-gray-50 hover:bg-blue-50/40 transition-colors ${i % 2 === 1 ? 'bg-gray-50/40' : ''}`}>
+                          {cols.map(col => (
+                            <td key={col} className="px-3 py-2.5 font-bold text-gray-800 whitespace-nowrap text-xs">
+                              {/* Color-code status */}
+                              {col === 'Status' && row[col] === 'Due'    ? <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[10px] font-black">{row[col]}</span>
+                              : col === 'Status' && row[col] === 'Credit' ? <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-black">{row[col]}</span>
+                              : col === 'Status' && row[col] === 'Paid'   ? <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-black">{row[col]}</span>
+                              : typeof row[col] === 'number' ? <span className="font-black text-gray-900">{row[col].toLocaleString()}</span>
+                              : String(row[col] ?? '-')}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                    {hasTotals && (
+                      <tfoot className="sticky bottom-0">
+                        <tr className="bg-gray-900 text-white">
+                          {cols.map(col => (
+                            <td key={col} className="px-3 py-3 text-xs font-black whitespace-nowrap border-r border-gray-700 last:border-0">
+                              {col === '#'         ? 'TOTAL'
+                              : totals[col] !== undefined ? totals[col].toLocaleString()
+                              : ''}
+                            </td>
+                          ))}
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* --- PRINT STYLES --- */}
-      <style>{`
-        @media print {
-          @page { size: portrait; margin: 10mm; }
-          .no-print { display: none !important; }
-          body { background: white !important; }
-          .print\:shadow-none { shadow: none !important; border: 1px solid #eee; }
-        }
-      `}</style>
+      {/* ── PRINT VIEW ── */}
+      <div className="hidden print:block">
+        {data.length > 0 && (
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr>{cols.map(col => <th key={col} className="border border-gray-400 px-2 py-1.5 text-left font-black bg-gray-200 uppercase text-[10px]">{col}</th>)}</tr>
+            </thead>
+            <tbody>
+              {data.map((row, i) => (
+                <tr key={i} className={i % 2 ? 'bg-gray-50' : ''}>
+                  {cols.map(col => <td key={col} className="border border-gray-300 px-2 py-1.5 text-xs">{String(row[col] ?? '-')}</td>)}
+                </tr>
+              ))}
+            </tbody>
+            {hasTotals && (
+              <tfoot>
+                <tr className="bg-gray-900 text-white font-black">
+                  {cols.map(col => (
+                    <td key={col} className="border border-gray-600 px-2 py-2 text-xs">
+                      {col === '#' ? 'TOTAL' : totals[col] !== undefined ? totals[col].toLocaleString() : ''}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        )}
+      </div>
     </div>
   );
-};
-
-export default ReportsPage;
+}

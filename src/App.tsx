@@ -38,6 +38,47 @@ import VehicleMaintenance from './pages/transport/VehicleMaintenance';
 
 import { supabase } from './supabaseClient';
 
+// ─── Permission-based Route Guard ─────────────────────────────────────────────
+const ProtectedRoute = ({ children, permId }: { children: React.ReactNode; permId: string }) => {
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const check = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setAllowed(false); return; }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, permissions')
+        .eq('id', user.id)
+        .single();
+      const isSuperAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
+      setAllowed(isSuperAdmin || !!profile?.permissions?.[permId]);
+    };
+    check();
+  }, [permId]);
+
+  if (allowed === null) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  if (!allowed) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="text-6xl mb-4">🔒</div>
+        <h2 className="text-2xl font-black text-gray-700 uppercase">Access Denied</h2>
+        <p className="text-gray-400 font-bold mt-2">You don't have permission to view this page.</p>
+        <a href="/" className="mt-6 inline-block px-6 py-3 bg-blue-600 text-white rounded-xl font-black text-sm uppercase hover:bg-blue-700">
+          Go to Dashboard
+        </a>
+      </div>
+    </div>
+  );
+
+  return <>{children}</>;
+};
+
 function App() {
   const [session, setSession] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,35 +133,32 @@ function App() {
           <Route path="/" element={<MainDashboard />} />
           <Route path="/dashboard/sales" element={<SalesDashboard />} />
           
-          <Route path="/hrm/employees" element={<EmployeeManagement />} />
-          <Route path="/hrm/payroll" element={<PayrollPage />} />
+          <Route path="/hrm/employees" element={<ProtectedRoute permId="hrm_access"><EmployeeManagement /></ProtectedRoute>} />
+          <Route path="/hrm/payroll" element={<ProtectedRoute permId="hrm_access"><PayrollPage /></ProtectedRoute>} />
 
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/inventory/raw-materials" element={<RawMaterialsPage />} />
-          <Route path="/inventory/raw-materials/grn/new" element={<AddRawMaterialGRNPage />} />
-          <Route path="/inventory/returns" element={<ReturnsAndDamagesPage />} />
-          <Route path="/inventory/grn/new" element={<AddGRNPage />} />
-          
-          {/* --- Route එක පරණ විදිහටම තියෙනවා, හැබැයි Import එක උඩින් වෙනස් කරලා තියෙන්නේ --- */}
-          <Route path="/inventory/reports" element={<ReportsPage />} /> 
-          
+          <Route path="/inventory/raw-materials/grn/new" element={<ProtectedRoute permId="inv_raw_material_grn"><AddRawMaterialGRNPage /></ProtectedRoute>} />
+          <Route path="/inventory/returns" element={<ProtectedRoute permId="inv_returns_damages"><ReturnsAndDamagesPage /></ProtectedRoute>} />
+          <Route path="/inventory/grn/new" element={<ProtectedRoute permId="inv_add_grn"><AddGRNPage /></ProtectedRoute>} />
+          <Route path="/inventory/reports" element={<ProtectedRoute permId="inv_stock_movement"><ReportsPage /></ProtectedRoute>} />
           <Route path="/inventory/suppliers" element={<SuppliersPage />} />
 
-          <Route path="/customers" element={<CustomersPage />} />
+          <Route path="/customers" element={<ProtectedRoute permId="customer_view"><CustomersPage /></ProtectedRoute>} />
 
-          <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/orders/new" element={<PurchaseOrder />} />
+          <Route path="/orders" element={<ProtectedRoute permId="sales_all_invoices_view"><OrdersPage /></ProtectedRoute>} />
+          <Route path="/orders/new" element={<ProtectedRoute permId="sales_purchase_order"><PurchaseOrder /></ProtectedRoute>} />
           
-          <Route path="/sales/new-invoice" element={<SalesInvoice />} />
-          <Route path="/sales/agencies" element={<AgencyOrdersPage />} />
+          <Route path="/sales/new-invoice" element={<ProtectedRoute permId="sales_new_invoice"><SalesInvoice /></ProtectedRoute>} />
+          <Route path="/sales/agencies" element={<ProtectedRoute permId="sales_agency_orders"><AgencyOrdersPage /></ProtectedRoute>} />
 
-          <Route path="/finance/ledger" element={<CustomerLedger />} />
-          <Route path="/finance/payments" element={<PaymentManager />} />
-          <Route path="/finance/payment-router" element={<PaymentRouterPage />} />
+          <Route path="/finance/ledger" element={<ProtectedRoute permId="customer_ledger_view"><CustomerLedger /></ProtectedRoute>} />
+          <Route path="/finance/payments" element={<ProtectedRoute permId="finance_payment_view"><PaymentManager /></ProtectedRoute>} />
+          <Route path="/finance/payment-router" element={<ProtectedRoute permId="finance_payment_router"><PaymentRouterPage /></ProtectedRoute>} />
 
           <Route path="/transport" element={<TransportDashboard />} />
-          <Route path="/transport/setup" element={<TransportSetup />} />
-          <Route path="/transport/log" element={<TransportLog />} />
+          <Route path="/transport/setup" element={<ProtectedRoute permId="transport_vehicle_view"><TransportSetup /></ProtectedRoute>} />
+          <Route path="/transport/log" element={<ProtectedRoute permId="transport_triplog"><TransportLog /></ProtectedRoute>} />
           <Route path="/transport/maintenance" element={<VehicleMaintenance />} />
 
           <Route path="/admin/permissions" element={<AdminPermissions />} />

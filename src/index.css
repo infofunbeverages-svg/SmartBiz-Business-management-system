@@ -130,7 +130,7 @@
 
   /* Page margins හදනවා */
   @page {
-    margin: 15mm;
+    margin: 0 !important;
     size: auto;
   }
 }
@@ -138,4 +138,33 @@
 /* Screen එකේදී ඉන්වොයිස් ටෙම්ප්ලේට් එක පේන විදිය */
 .print-only {
   background: white;
+}
+@media print {
+  .no-print { display: none !important; }
+  body { margin: 0; }
+}
+
+/* ── BROWSER PRINT HEADER/FOOTER REMOVE ─────────────────── */
+@media print {
+  /* Browser URL, page numbers, date හංගනවා */
+  @page {
+    margin: 0 !important;
+    size: auto;
+  }
+
+  /* Print කරනකොට body margin */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Mobile bottom nav hide */
+  .mobile-nav, [class*="MobileNav"], [class*="mobile-nav"],
+  nav[class*="bottom"], div[class*="bottomNav"] {
+    display: none !important;
+  }
+
+  /* Page break control */
+  table { page-break-inside: auto; }
+  tr    { page-break-inside: avoid; }
 }
