@@ -1,11 +1,10 @@
 /**
  * Format a number as currency
  */
-export function formatCurrency(amount: number, locale = 'en-US', currency = 'USD'): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
+export function formatCurrency(amount: number): string {
+  return 'LKR ' + new Intl.NumberFormat('en-LK', {
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 

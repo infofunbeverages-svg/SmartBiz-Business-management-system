@@ -19,9 +19,9 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ data }) => {
 
   const formatYAxis = (value: number) => {
     if (value >= 1000) {
-      return `$${value / 1000}k`;
+      return `LKR ${(value / 1000).toFixed(0)}k`;
     }
-    return `$${value}`;
+    return `LKR ${value}`;
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {

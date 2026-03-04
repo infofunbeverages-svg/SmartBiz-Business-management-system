@@ -29,7 +29,7 @@ const InventoryPage = () => {
 
   // Form States (Edit & Add)
   // Pack Size (bottles_per_case) එක මෙතනින් පාලනය වෙනවා
-  const [formData, setFormData] = useState({ name: '', price: 0, bottles_per_case: 12, sku: '', category: '' });
+  const [formData, setFormData] = useState({ name: '', price: 0, special_price: 0, bottles_per_case: 12, sku: '', category: '' });
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -47,6 +47,7 @@ const InventoryPage = () => {
     const { error } = await supabase.from('inventory').insert([{
       name: formData.name,
       price: formData.price,
+        special_price: formData.special_price || null,
       bottles_per_case: formData.bottles_per_case,
       sku: formData.sku,
       quantity: 0 // මුලින්ම stock එක 0 යි
@@ -99,7 +100,7 @@ const InventoryPage = () => {
 
   // --- Sync Inventory from GRN - Invoice (Balance) ---
   const handleSyncFromGRNAndInvoices = async () => {
-    if (!window.confirm('GRN සහ Invoice එකෙන් inventory balance ගණන ගස්සන්නද? (Existing quantity replace වෙයි)')) return;
+    if (!window.confirm('Recalculate inventory balance from GRN and Invoices? (Existing quantity will be replaced)')) return;
     setSyncing(true);
     try {
       const companyId = company?.id;
@@ -148,7 +149,7 @@ const InventoryPage = () => {
         const balance = Math.max(0, inventoryMap[productId] || 0);
         await supabase.from('inventory').update({ quantity: balance }).eq('id', productId);
       }
-      alert('Inventory balance sync සාර්ථකයි! GRN - Invoice + Returns = Balance');
+      alert('Inventory balance synced! GRN - Invoice + Returns = Balance');
       fetchProducts();
     } catch (err: any) {
       alert('Sync error: ' + err.message);
@@ -169,7 +170,7 @@ const InventoryPage = () => {
     setActiveModal('NONE');
     setSelectedProduct(null);
     setAdjCases(0); setAdjBottles(0); setAdjNote('');
-    setFormData({ name: '', price: 0, bottles_per_case: 12, sku: '', category: '' });
+    setFormData({ name: '', price: 0, special_price: 0, bottles_per_case: 12, sku: '', category: '' });
   };
 
   const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -239,13 +240,33 @@ const InventoryPage = () => {
                   )
                 } 
               },
+              {
+                header: 'Price / Special',
+                accessorKey: 'price',
+                cell: (r: any) => (
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black text-gray-400 uppercase">MRP</span>
+                      <span className="font-black text-slate-700">LKR {Number(r.price || 0).toFixed(2)}</span>
+                    </div>
+                    {r.special_price ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black text-orange-400 uppercase">Special 🔥</span>
+                        <span className="font-black text-orange-600">LKR {Number(r.special_price).toFixed(2)}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] text-gray-300 font-bold">No special price</span>
+                    )}
+                  </div>
+                )
+              },
               { 
                 header: 'Actions', 
                 accessorKey: 'id', 
                 cell: (r: any) => (
                   <div className="flex items-center gap-2">
                     <button onClick={() => { setSelectedProduct(r); setActiveModal('ADJUST'); }} className="p-2.5 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-600 hover:text-white transition-all shadow-sm" title="Adjust Stock"><PackagePlus size={18} /></button>
-                    <button onClick={() => { setSelectedProduct(r); setFormData({ name: r.name, price: r.price, bottles_per_case: r.bottles_per_case, sku: r.sku, category: r.category }); setActiveModal('EDIT'); }} className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Edit"><Pencil size={18} /></button>
+                    <button onClick={() => { setSelectedProduct(r); setFormData({ name: r.name, price: r.price, special_price: r.special_price || 0, bottles_per_case: r.bottles_per_case, sku: r.sku, category: r.category }); setActiveModal('EDIT'); }} className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Edit"><Pencil size={18} /></button>
                     <button onClick={() => fetchItemHistory(r)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm" title="History"><History size={18} /></button>
                     <button onClick={() => handleDeleteProduct(r.id)} className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Delete"><Trash2 size={18} /></button>
                   </div>
@@ -272,10 +293,15 @@ const InventoryPage = () => {
                 <input placeholder="Ex: Lion Lager 625ml" className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-none focus:ring-2 focus:ring-blue-500 outline-none transition-all uppercase" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Case Price (LKR)</label>
                   <input type="number" placeholder="0.00" className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-none outline-none" value={formData.price} onChange={e => setFormData({...formData, price: parseFloat(e.target.value)})} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-orange-400 mb-2 block tracking-widest">Special Price (LKR) 🔥</label>
+                  <input type="number" placeholder="For 40%+ disc customers" className="w-full p-4 bg-orange-50 rounded-2xl font-bold border border-orange-200 outline-none focus:border-orange-400" value={formData.special_price || ''} onChange={e => setFormData({...formData, special_price: parseFloat(e.target.value) || 0})} />
+                  <p className="text-[9px] text-orange-400 mt-1 font-bold">Auto-used when customer disc &gt; 40%</p>
                 </div>
                 <div>
                   <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Pack Size (Btls)</label>

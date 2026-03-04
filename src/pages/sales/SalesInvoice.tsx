@@ -336,8 +336,13 @@ const SalesInvoice = () => {
   const invoiceIdFromRoute = location?.state?.invoiceId || new URLSearchParams(location?.search || '').get('edit');
 
   const vehicleRef  = useRef<HTMLInputElement>(null);
+  const driverRef   = useRef<HTMLInputElement>(null);
+  const dispatchRef = useRef<HTMLInputElement>(null);
   const casesRefs   = useRef<(HTMLInputElement | null)[]>([]);
   const bottlesRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const priceRefs   = useRef<(HTMLInputElement | null)[]>([]);
+  const discRefs    = useRef<(HTMLInputElement | null)[]>([]);
+  const freeRefs    = useRef<(HTMLInputElement | null)[]>([]);
 
   const [customers, setCustomers]               = useState<any[]>([]);
   const [stock, setStock]                       = useState<any[]>([]);
@@ -348,8 +353,10 @@ const SalesInvoice = () => {
   const [invoiceDate, setInvoiceDate]           = useState(new Date().toISOString().split('T')[0]);
   const [invoiceNo, setInvoiceNo]               = useState('Loading...');
   const [isSaving, setIsSaving]                 = useState(false);
-  const [items, setItems]                       = useState([{ inventory_id: '', cases: '' as any, qty_bottles: '' as any, units_per_case: 12, unit_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
+  const [items, setItems]                       = useState([{ inventory_id: '', cases: '' as any, qty_bottles: '' as any, units_per_case: 12, unit_price: 0, mrp_price: 0, special_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [draftList, setDraftList]               = useState<any[]>([]);
+  const [showDrafts, setShowDrafts]             = useState(false);
   const [searchQuery, setSearchQuery]           = useState('');
   const [searchResults, setSearchResults]       = useState<any[]>([]);
   const [recentInvoices, setRecentInvoices]     = useState<any[]>([]);
@@ -379,12 +386,24 @@ const SalesInvoice = () => {
       setStock(stockData || []);
       if (!editingInvoiceId) generateNextInvoiceNo();
       fetchRecentInvoices();
+    fetchDrafts();
     } catch (err) { console.error('fetchData error:', err); }
   };
 
   const fetchRecentInvoices = async () => {
     const { data } = await supabase.from('invoices').select('*, customers(full_name, address)').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(10);
     setRecentInvoices(data || []);
+  };
+
+  const fetchDrafts = async () => {
+    const { data } = await supabase
+      .from('draft_invoices')
+      .select('*, customers(full_name)')
+      .eq('company_id', company?.id)
+      .eq('status', 'Draft')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setDraftList(data || []);
   };
 
   const generateNextInvoiceNo = async () => {
@@ -416,6 +435,8 @@ const SalesInvoice = () => {
         qty_bottles:       item.qty_bottles || 0,
         units_per_case:    item.inventory?.bottles_per_case || 12,
         unit_price:        Number(item.unit_price) || 0,
+        mrp_price:         Number(item.unit_price) || 0,
+        special_price:     0,
         item_discount_per: Number(item.item_discount_per) || 0,
         is_free:           !!item.is_free || Number(item.total) === 0,
         total:             Number(item.total) || 0
@@ -432,7 +453,7 @@ const SalesInvoice = () => {
         cust = cd || null;
       }
       setCustomerDetails(cust || null);
-      setItems(loadedItems.length > 0 ? loadedItems : [{ inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
+      setItems(loadedItems.length > 0 ? loadedItems : [{ inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, mrp_price: 0, special_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
       setSearchResults([]);
       setSearchQuery('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -445,7 +466,7 @@ const SalesInvoice = () => {
 
   const resetForm = () => {
     setEditingInvoiceId(null);
-    setItems([{ inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
+    setItems([{ inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, mrp_price: 0, special_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
     setVehicleNo(''); setDriverName(''); setDispatchNo('');
     setCustomerDetails(null); setSearchQuery(''); setSearchResults([]);
     fetchData();
@@ -461,20 +482,40 @@ const SalesInvoice = () => {
   const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
+
     if (field === 'inventory_id') {
       const prod = stock.find(s => s.id === value);
       if (prod) {
-        newItems[index].unit_price = prod.price || 0;
+        newItems[index].mrp_price     = prod.price || 0;
+        newItems[index].special_price = prod.special_price || 0;
         newItems[index].units_per_case = prod.bottles_per_case || 12;
+        // Auto pick price based on discount
+        const disc = Number(newItems[index].item_discount_per || 0);
+        newItems[index].unit_price = (disc > 40 && prod.special_price)
+          ? prod.special_price
+          : prod.price || 0;
       }
     }
+
+    // Discount change → auto switch price
+    if (field === 'item_discount_per') {
+      const disc = parseFloat(value) || 0;
+      const mrp  = newItems[index].mrp_price || newItems[index].unit_price;
+      const sp   = newItems[index].special_price || 0;
+      if (disc > 40 && sp) {
+        newItems[index].unit_price = sp;
+      } else if (disc <= 40 && mrp) {
+        newItems[index].unit_price = mrp;
+      }
+    }
+
     newItems[index].total = calculateLineTotal(newItems[index]);
     setItems(newItems);
   };
 
   const addNewRow = useCallback(() => {
     const disc = customerDetails ? Number(customerDetails.default_discount ?? 0) : 0;
-    setItems(prev => [...prev, { inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, item_discount_per: disc, is_free: false, total: 0 }]);
+    setItems(prev => [...prev, { inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, mrp_price: 0, special_price: 0, item_discount_per: disc, is_free: false, total: 0 }]);
     setTimeout(() => {
       const inputs = document.querySelectorAll<HTMLElement>('.item-dropdown-input');
       (inputs[inputs.length - 1] as HTMLElement)?.focus();
@@ -487,7 +528,7 @@ const SalesInvoice = () => {
 
   const clearAllItems = () => {
     if (!window.confirm('Clear all item lines?')) return;
-    setItems([{ inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
+    setItems([{ inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, mrp_price: 0, special_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
   };
 
   const markAllFree = (flag: boolean) => {
@@ -515,6 +556,8 @@ const SalesInvoice = () => {
         qty_bottles:       item.qty_bottles || 0,
         units_per_case:    item.inventory?.bottles_per_case || 12,
         unit_price:        Number(item.unit_price) || 0,
+        mrp_price:         Number(item.unit_price) || 0,
+        special_price:     0,
         item_discount_per: Number(item.item_discount_per) || 0,
         is_free:           !!item.is_free,
         total:             Number(item.total) || 0
@@ -525,6 +568,63 @@ const SalesInvoice = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!customerDetails) { alert('Please select a customer first!'); return; }
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const draftNo = `DRF-${Date.now().toString().slice(-6)}`;
+      const totalAmt = items.reduce((a, i) => a + Number(i.total || 0), 0);
+      const { data: draft, error: de } = await supabase
+        .from('draft_invoices')
+        .insert([{ company_id: company?.id, customer_id: customerDetails.id, draft_no: draftNo,
+          vehicle_no: vehicleNo, driver_name: driverName, dispatch_no: dispatchNo,
+          draft_date: invoiceDate, total_amount: totalAmt, status: 'Draft' }])
+        .select().single();
+      if (de) throw de;
+      const draftItems = items.filter(i => i.inventory_id).map(i => ({
+        draft_id: draft.id, company_id: company?.id, inventory_id: i.inventory_id,
+        cases: Number(i.cases||0), qty_bottles: Number(i.qty_bottles||0),
+        units_per_case: Number(i.units_per_case||12), unit_price: Number(i.unit_price||0),
+        item_discount_per: Number(i.item_discount_per||0), is_free: !!i.is_free, total: Number(i.total||0),
+      }));
+      await supabase.from('draft_invoice_items').insert(draftItems);
+      alert(`✅ Draft ${draftNo} saved!`);
+      fetchDrafts();
+      setShowDrafts(true);
+    } catch (err: any) {
+      alert('Draft save failed: ' + err.message);
+    } finally { setIsSaving(false); }
+  };
+
+  const loadDraftForEdit = async (draft: any) => {
+    setIsSaving(true);
+    try {
+      const { data: di } = await supabase
+        .from('draft_invoice_items')
+        .select('*, inventory:inventory_id(bottles_per_case)')
+        .eq('draft_id', draft.id);
+      const loadedItems = (di || []).map((item: any) => ({
+        inventory_id: item.inventory_id, cases: item.cases || 0, qty_bottles: item.qty_bottles || 0,
+        units_per_case: item.inventory?.bottles_per_case || 12, unit_price: Number(item.unit_price) || 0,
+        mrp_price: Number(item.unit_price) || 0, special_price: 0,
+        item_discount_per: Number(item.item_discount_per) || 0, is_free: !!item.is_free, total: Number(item.total) || 0,
+      }));
+      let cust = customers.find(c => c.id === draft.customer_id);
+      if (!cust) { const { data: cd } = await supabase.from('customers').select('*').eq('id', draft.customer_id).single(); cust = cd; }
+      setCustomerDetails(cust || null);
+      setVehicleNo(draft.vehicle_no || '');
+      setDriverName(draft.driver_name || '');
+      setDispatchNo(draft.dispatch_no || '');
+      setInvoiceDate(draft.draft_date || new Date().toISOString().split('T')[0]);
+      setItems(loadedItems.length > 0 ? loadedItems : [{ inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, mrp_price: 0, special_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
+      setShowDrafts(false);
+      sessionStorage.setItem('_activeDraftId', draft.id);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err: any) { alert('Error loading draft: ' + err.message); }
+    finally { setIsSaving(false); }
   };
 
   const handleSaveInvoice = async () => {
@@ -578,6 +678,11 @@ const SalesInvoice = () => {
         status:      'Open'
       }]);
 
+      const activeDraftId = sessionStorage.getItem('_activeDraftId');
+      if (activeDraftId) {
+        await supabase.from('draft_invoices').update({ status: 'Converted' }).eq('id', activeDraftId);
+        sessionStorage.removeItem('_activeDraftId');
+      }
       alert(`✅ Invoice ${invoiceNo} ${editingInvoiceId ? 'updated' : 'saved'} successfully!`);
       window.print();
       resetForm();
@@ -655,8 +760,8 @@ const SalesInvoice = () => {
           </div>
         </div>
 
-                <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="col-span-3">
+                <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="col-span-4">
             <label className="text-[10px] font-bold text-gray-400 uppercase">Customer</label>
             <AreaCustomerDropdown
               customers={customers}
@@ -673,23 +778,31 @@ const SalesInvoice = () => {
             )}
           </div>
           <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase">Vehicle</label>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Vehicle No</label>
             <input
               ref={vehicleRef}
               className="w-full p-3 bg-gray-50 rounded-xl font-bold outline-none border border-transparent focus:border-blue-400"
+              placeholder="AB-1234"
               value={vehicleNo}
               onChange={e => setVehicleNo(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  document.querySelector<HTMLElement>('.item-dropdown-input')?.focus();
-                }
-              }}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); driverRef.current?.focus(); } }}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Driver Name</label>
+            <input
+              ref={driverRef}
+              className="w-full p-3 bg-gray-50 rounded-xl font-bold outline-none border border-transparent focus:border-blue-400"
+              placeholder="Driver name"
+              value={driverName}
+              onChange={e => setDriverName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); dispatchRef.current?.focus(); } }}
             />
           </div>
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase">Dispatch No</label>
             <input
+              ref={dispatchRef}
               className="w-full p-3 bg-gray-50 rounded-xl font-bold outline-none border border-transparent focus:border-blue-400"
               placeholder="DSP-XXXXX"
               value={dispatchNo}
@@ -722,7 +835,8 @@ const SalesInvoice = () => {
               <th className="p-3 text-left">Item</th>
               <th className="p-3 text-center">CS</th>
               <th className="p-3 text-center">BT</th>
-              <th className="p-3 text-right">Price ✏️</th>
+              <th className="p-3 text-right text-gray-500">MRP</th>
+              <th className="p-3 text-right text-blue-300">Price ✏️</th>
               <th className="p-3 text-center">Disc %</th>
               <th className="p-3 text-center">Free</th>
               <th className="p-3 text-right">Total</th>
@@ -757,40 +871,52 @@ const SalesInvoice = () => {
                     className="w-full p-2 bg-gray-50 text-center rounded-lg outline-none border border-transparent focus:border-blue-400"
                     value={item.qty_bottles}
                     onChange={e => updateItem(i, 'qty_bottles', e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (i === items.length - 1) {
-                          addNewRow();
-                        } else {
-                          const dropdowns = document.querySelectorAll<HTMLElement>('.item-dropdown-input');
-                          dropdowns[i + 1]?.focus();
-                        }
-                      }
-                    }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); priceRefs.current[i]?.focus(); } }}
                   />
                 </td>
+                {/* MRP - read only */}
+                <td className="p-2 text-right text-xs text-gray-300 font-bold">
+                  {item.mrp_price > 0 ? Number(item.mrp_price).toFixed(2) : ''}
+                </td>
+                {/* Price - editable */}
                 <td className="p-2">
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="w-full p-2 bg-blue-50 text-right font-bold rounded-lg border border-blue-200 outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                    type="number" step="0.01" min="0"
+                    ref={el => { priceRefs.current[i] = el; }}
+                    className={`w-full p-2 text-right font-black rounded-lg outline-none border transition-colors ${item.special_price > 0 && item.unit_price === item.special_price ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-blue-50 border-blue-200 text-blue-800 focus:border-blue-500'}`}
                     value={item.unit_price || ''}
                     onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); discRefs.current[i]?.focus(); } }}
                     placeholder="0.00"
                   />
+                  {item.special_price > 0 && item.unit_price === item.special_price && (
+                    <p className="text-[8px] text-orange-500 font-black text-right">🔥 SPECIAL</p>
+                  )}
                 </td>
                 <td className="p-2">
                   <input
                     type="number" step="0.01" min="0" max="100"
-                    className="w-full p-2 bg-amber-50 text-center font-bold rounded-lg border border-amber-200 outline-none focus:border-amber-400"
+                    ref={el => { discRefs.current[i] = el; }}
+                    className={`w-full p-2 text-center font-bold rounded-lg border outline-none ${Number(item.item_discount_per||0) > 40 ? 'bg-red-50 border-red-300 text-red-700' : 'bg-amber-50 border-amber-200 focus:border-amber-400'}`}
                     value={item.item_discount_per || ''}
                     onChange={e => updateItem(i, 'item_discount_per', parseFloat(e.target.value) || 0)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); freeRefs.current[i]?.focus(); } }}
                   />
                 </td>
                 <td className="p-2 text-center">
-                  <input type="checkbox" checked={!!item.is_free} onChange={e => updateItem(i, 'is_free', e.target.checked)} />
+                  <input
+                    type="checkbox"
+                    ref={el => { freeRefs.current[i] = el; }}
+                    checked={!!item.is_free}
+                    onChange={e => updateItem(i, 'is_free', e.target.checked)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (i === items.length - 1) { addNewRow(); }
+                        else { document.querySelectorAll<HTMLElement>('.item-dropdown-input')[i+1]?.focus(); }
+                      }
+                    }}
+                  />
                 </td>
                 <td className="p-2 text-right font-bold text-blue-600">{Number(item.total).toFixed(2)}</td>
                 <td className="p-2">
@@ -812,6 +938,9 @@ const SalesInvoice = () => {
           </div>
           <div className="flex gap-4">
             <button onClick={addNewRow} className="bg-gray-700 px-6 py-3 rounded-xl font-bold text-xs uppercase">+ Item</button>
+            <button onClick={handleSaveDraft} disabled={isSaving} className="bg-amber-500 hover:bg-amber-600 px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 uppercase text-white">
+              📝 Save Draft
+            </button>
             <button onClick={handleSaveInvoice} disabled={isSaving} className="bg-blue-600 px-10 py-3 rounded-xl font-bold text-xs flex items-center gap-2 uppercase">
               {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>}
               {editingInvoiceId ? "Update & Print" : "Save & Print"}
@@ -847,6 +976,47 @@ const SalesInvoice = () => {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* DRAFTS PANEL */}
+      <div className="max-w-6xl mx-auto no-print bg-white p-6 rounded-[2rem] border shadow-sm mt-6">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-black flex items-center gap-2 text-sm uppercase text-amber-600">
+            📝 Draft Invoices
+            {draftList.length > 0 && <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full">{draftList.length}</span>}
+          </h3>
+          <button onClick={() => setShowDrafts(!showDrafts)} className="text-xs font-bold text-gray-400 hover:text-gray-700">
+            {showDrafts ? '▲ Hide' : '▼ Show'}
+          </button>
+        </div>
+        {showDrafts && (draftList.length === 0 ? (
+          <p className="text-gray-400 text-sm">No drafts saved.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead><tr className="text-gray-400 text-[10px] uppercase border-b">
+              <th className="p-2 text-left">Draft No</th>
+              <th className="p-2 text-left">Customer</th>
+              <th className="p-2 text-left">Date</th>
+              <th className="p-2 text-right">Amount</th>
+              <th className="p-2 text-center">Action</th>
+            </tr></thead>
+            <tbody>
+              {draftList.map(d => (
+                <tr key={d.id} className="border-b hover:bg-amber-50">
+                  <td className="p-2 font-bold text-amber-600">📝 {d.draft_no}</td>
+                  <td className="p-2 font-bold uppercase">{d.customers?.full_name}</td>
+                  <td className="p-2 text-gray-500 font-bold">{d.draft_date}</td>
+                  <td className="p-2 text-right font-bold">LKR {Number(d.total_amount).toLocaleString()}</td>
+                  <td className="p-2 text-center">
+                    <button onClick={() => loadDraftForEdit(d)} className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-[10px] uppercase">
+                      Load → Convert
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ))}
       </div>
 
       {/* ── PRINT AREA - screen hide, print වෙද්දී show ── */}
