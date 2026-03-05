@@ -55,7 +55,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileSidebarOpen, setIsMobileSideb
         { title: 'Suppliers List',       path: '/inventory/suppliers',              show: true },
         { title: 'Add GRN (Stock In)',   path: '/inventory/grn/new',               show: isSuperAdmin || can('inv_add_grn') },
         { title: 'Add Raw Material GRN', path: '/inventory/raw-materials/grn/new', show: isSuperAdmin || can('inv_raw_material_grn') },
-        { title: 'RM Issue (Production)', path: '/inventory/raw-materials/issue/new', show: true },
         { title: 'Returns & Damages',    path: '/inventory/returns',               show: isSuperAdmin || can('inv_returns_damages') },
         { title: 'Stock Movement',       path: '/inventory/reports',               show: isSuperAdmin || can('inv_stock_movement') },
       ]
@@ -70,6 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileSidebarOpen, setIsMobileSideb
         { title: 'Purchase Order',         path: '/orders/new',        show: isSuperAdmin || can('sales_purchase_order') },
         { title: 'All Invoices / Orders',  path: '/orders',            show: isSuperAdmin || can('sales_all_invoices_view') },
         { title: 'Agency Orders',          path: '/sales/agencies',    show: isSuperAdmin || can('sales_agency_orders') },
+        { title: 'New Agency Order',        path: '/sales/agencies/new', show: true },
       ]
     },
     {

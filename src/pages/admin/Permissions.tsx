@@ -14,7 +14,8 @@ const PERMISSION_GROUPS = [
     { id: 'sales_purchase_order',    label: 'Purchase Order' },
     { id: 'sales_all_invoices_view', label: 'All Invoices - View' },
     { id: 'sales_all_invoices_edit', label: 'All Invoices - Edit' },
-    { id: 'sales_agency_orders',     label: 'Agency Orders' },
+    { id: 'sales_agency_orders',     label: 'Agency Orders (View/Manage)' },
+    { id: 'sales_agency_order_new',  label: 'New Agency Order (Field)' },
   ]},
   { group: 'CUSTOMERS', color: 'purple', perms: [
     { id: 'customer_view',         label: 'Customer - View' },

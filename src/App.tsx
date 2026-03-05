@@ -9,7 +9,6 @@ import InventoryPage from './pages/inventory/InventoryPage';
 import AddGRNPage from './pages/inventory/AddGRNPage';
 import RawMaterialsPage from './pages/inventory/RawMaterialsPage';
 import AddRawMaterialGRNPage from './pages/inventory/AddRawMaterialGRNPage';
-import RawMaterialIssuePage from './pages/inventory/RawMaterialIssuePage';
 import ReturnsAndDamagesPage from './pages/inventory/ReturnsAndDamagesPage'; 
 
 // --- අලුත් Reports Path එක මෙතනට Update කළා ---
@@ -17,7 +16,8 @@ import ReportsPage from './pages/reports/ReportsPage';
 
 import OrdersPage from './pages/orders/OrdersPage';
 import PurchaseOrder from './pages/orders/PurchaseOrder'; 
-import AgencyOrdersPage from './pages/orders/AgencyOrdersPage'; 
+import AgencyOrdersPage from './pages/orders/AgencyOrdersPage';
+import AgencyOrderNew    from './pages/orders/AgencyOrderNew'; 
 import AdminPermissions from './pages/admin/Permissions'; 
 import CompanySetup from './pages/admin/CompanySetup';
 import SuppliersPage from './pages/inventory/SuppliersPage'; 
@@ -140,7 +140,6 @@ function App() {
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/inventory/raw-materials" element={<RawMaterialsPage />} />
           <Route path="/inventory/raw-materials/grn/new" element={<ProtectedRoute permId="inv_raw_material_grn"><AddRawMaterialGRNPage /></ProtectedRoute>} />
-          <Route path="/inventory/raw-materials/issue/new" element={<RawMaterialIssuePage />} />
           <Route path="/inventory/returns" element={<ProtectedRoute permId="inv_returns_damages"><ReturnsAndDamagesPage /></ProtectedRoute>} />
           <Route path="/inventory/grn/new" element={<ProtectedRoute permId="inv_add_grn"><AddGRNPage /></ProtectedRoute>} />
           <Route path="/inventory/reports" element={<ProtectedRoute permId="inv_stock_movement"><ReportsPage /></ProtectedRoute>} />
@@ -153,6 +152,7 @@ function App() {
           
           <Route path="/sales/new-invoice" element={<ProtectedRoute permId="sales_new_invoice"><SalesInvoice /></ProtectedRoute>} />
           <Route path="/sales/agencies" element={<ProtectedRoute permId="sales_agency_orders"><AgencyOrdersPage /></ProtectedRoute>} />
+          <Route path="/sales/agencies/new" element={<AgencyOrderNew />} />
 
           <Route path="/finance/ledger" element={<ProtectedRoute permId="customer_ledger_view"><CustomerLedger /></ProtectedRoute>} />
           <Route path="/finance/payments" element={<ProtectedRoute permId="finance_payment_view"><PaymentManager /></ProtectedRoute>} />

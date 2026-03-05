@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, XCircle, Clock, Printer, FileText, CheckCircle, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ShoppingBag, XCircle, Clock, Printer, FileText, CheckCircle, RefreshCw, Plus } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { useCompany } from '../../utils/useCompany';
 
@@ -108,6 +109,7 @@ const DraftPrintTemplate = ({ draft, items, customer, company }: any) => {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const AgencyOrdersPage = () => {
   const { company } = useCompany();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab]       = useState<'agency' | 'drafts'>('drafts');
   const [orders, setOrders]             = useState<any[]>([]);
   const [drafts, setDrafts]             = useState<any[]>([]);
@@ -177,10 +179,16 @@ const AgencyOrdersPage = () => {
           <h1 className="text-2xl font-black text-gray-800 uppercase tracking-tighter">Orders & Drafts</h1>
           <p className="text-sm text-gray-500 font-medium">Agency orders and draft invoices</p>
         </div>
-        <button onClick={() => { fetchAgencyOrders(); fetchDrafts(); }}
-          className="p-2 bg-white border rounded-xl hover:bg-gray-50">
-          <RefreshCw size={16} />
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => navigate('/sales/agencies/new')}
+            className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 text-white rounded-xl font-black text-xs uppercase hover:bg-orange-700">
+            <ShoppingBag size={14} /> + New Order
+          </button>
+          <button onClick={() => { fetchAgencyOrders(); fetchDrafts(); }}
+            className="p-2 bg-white border rounded-xl hover:bg-gray-50">
+            <RefreshCw size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
