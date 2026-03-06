@@ -689,7 +689,8 @@ const SalesInvoice = () => {
       if (error) throw error;
 
       await supabase.from('customer_ledger').delete().eq('customer_id', customerDetails.id).eq('type', 'Invoice').eq('reference', editingInvoiceId ? originalInvoiceNo : freshInvoiceNo);
-      await supabase.from('customer_ledger').insert([{
+      const { error: ledgerError } = await supabase.from('customer_ledger').insert([{
+        company_id:  company?.id,
         customer_id: customerDetails.id,
         date:        invoiceDate,
         type:        'Invoice',
@@ -699,6 +700,7 @@ const SalesInvoice = () => {
         credit:      0,
         status:      'Open'
       }]);
+      if (ledgerError) console.warn('Ledger insert warn:', ledgerError.message);
 
       const activeDraftId = sessionStorage.getItem('_activeDraftId');
       if (activeDraftId) {
