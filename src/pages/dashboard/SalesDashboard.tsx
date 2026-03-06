@@ -6,34 +6,9 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
-import { Plus, TrendingUp, Package, AlertTriangle, FileText, Users, ArrowUpRight } from 'lucide-react';
+import { Plus, TrendingUp, Package, AlertTriangle, FileText, Users, ChevronRight, DollarSign, ShoppingCart, Tag } from 'lucide-react';
 
 const COLORS = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#3b82f6','#14b8a6','#f97316'];
-
-const renderDonutLabel = ({ cx, cy, name, value, percent }: any) => null;
-
-const ActiveDonutShape = (props: any) => {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, value, percent } = props;
-  return (
-    <g>
-      <text x={cx} y={cy - 14} textAnchor="middle" fill="#fff" style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1 }}>
-        {(payload.name || '').slice(0, 14)}
-      </text>
-      <text x={cx} y={cy + 6} textAnchor="middle" fill="#a5b4fc" style={{ fontSize: 10, fontWeight: 700 }}>
-        LKR {Number(value).toLocaleString()}
-      </text>
-      <text x={cx} y={cy + 22} textAnchor="middle" fill="#6366f1" style={{ fontSize: 10, fontWeight: 900 }}>
-        {(percent * 100).toFixed(1)}%
-      </text>
-      <path d={`M ${cx},${cy} m 0,${-innerRadius - 4} a ${innerRadius + 4},${innerRadius + 4} 0 1,0 0.01,0`} fill="none" />
-      <circle cx={cx} cy={cy} r={innerRadius - 2} fill="#0f172a" />
-      <path
-        d={`M${cx + (outerRadius + 4) * Math.cos(-startAngle * Math.PI / 180)},${cy + (outerRadius + 4) * Math.sin(-startAngle * Math.PI / 180)}`}
-        fill={fill}
-      />
-    </g>
-  );
-};
 
 export default function SalesDashboard() {
   const navigate = useNavigate();
@@ -42,7 +17,6 @@ export default function SalesDashboard() {
   const [range, setRange]         = useState<'today'|'week'|'month'>('month');
   const [stats, setStats]         = useState({ revenue: 0, invoices: 0, discount: 0, avg: 0 });
   const [areaData, setAreaData]   = useState<any[]>([]);
-  const [barData, setBarData]     = useState<any[]>([]);
   const [pieData, setPieData]     = useState<any[]>([]);
   const [activePie, setActivePie] = useState(0);
   const [recent, setRecent]       = useState<any[]>([]);
@@ -74,21 +48,15 @@ export default function SalesDashboard() {
     // Area chart
     const grouped: Record<string,number> = {};
     inv.forEach(i => { const d = i.date?.slice(0,10)||''; if(d) grouped[d] = (grouped[d]||0)+Number(i.net_amount||i.total_amount||0); });
-    const area = Object.entries(grouped).sort(([a],[b])=>a.localeCompare(b))
-      .map(([date, amt]) => ({ label: new Date(date).toLocaleDateString('en-GB',{month:'short',day:'numeric'}), amt: Math.round(amt) }));
-    setAreaData(area);
-
-    // Bar - last 7 distinct dates
-    setBarData(area.slice(-7));
+    setAreaData(Object.entries(grouped).sort(([a],[b])=>a.localeCompare(b))
+      .map(([date, amt]) => ({ label: new Date(date).toLocaleDateString('en-GB',{month:'short',day:'numeric'}), amt: Math.round(amt) })));
 
     // Items pie
     const ids = inv.map(i=>i.id);
     if (ids.length) {
       const { data: items } = await supabase
-        .from('invoice_items')
-        .select('total, inventory:inventory_id(name)')
-        .in('invoice_id', ids)
-        .eq('is_free', false);
+        .from('invoice_items').select('total, inventory:inventory_id(name)')
+        .in('invoice_id', ids).eq('is_free', false);
       const map: Record<string,number> = {};
       (items||[]).forEach((it:any) => { const n = it.inventory?.name||'Other'; map[n]=(map[n]||0)+Number(it.total||0); });
       setPieData(Object.entries(map).sort(([,a],[,b])=>b-a).slice(0,8).map(([name,value])=>({name,value:Math.round(value)})));
@@ -106,148 +74,165 @@ export default function SalesDashboard() {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{background:'#070b14'}}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <div className="w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"/>
-        <p style={{color:'#6366f1',fontSize:11,fontWeight:900,letterSpacing:4}}>LOADING</p>
+        <div className="w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"/>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading...</p>
       </div>
     </div>
   );
 
-  const maxBar = Math.max(...barData.map(d=>d.amt), 1);
-
   return (
-    <div style={{ background: '#070b14', minHeight: '100vh', fontFamily: "'DM Sans', 'Segoe UI', sans-serif", color: '#e2e8f0', padding: '24px' }}>
+    <div className="bg-gray-50 min-h-screen p-6 space-y-5">
 
       {/* ── HEADER ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
+      <div className="flex justify-between items-center">
         <div>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
-            <div style={{ width:8, height:8, borderRadius:'50%', background:'#6366f1', boxShadow:'0 0 10px #6366f1' }}/>
-            <span style={{ fontSize:11, fontWeight:800, color:'#6366f1', letterSpacing:3, textTransform:'uppercase' }}>CRM Dashboard</span>
-            <span style={{ fontSize:10, color:'#334155', fontWeight:700, letterSpacing:2 }}>• LIVE</span>
-          </div>
-          <h1 style={{ fontSize:28, fontWeight:900, letterSpacing:-1, lineHeight:1, color:'#f1f5f9', margin:0 }}>
-            Sales <span style={{ color:'#6366f1' }}>Intelligence</span>
+          <h1 className="text-3xl font-black tracking-tight text-gray-900">
+            Sales <span className="text-indigo-600">Hub</span>
           </h1>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Live Intelligence Dashboard</p>
         </div>
-        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-          <div style={{ display:'flex', background:'#0f172a', borderRadius:12, padding:4, border:'1px solid #1e293b' }}>
+        <div className="flex items-center gap-3">
+          {/* Range Tabs */}
+          <div className="flex bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
             {(['today','week','month'] as const).map(r => (
-              <button key={r} onClick={()=>setRange(r)} style={{
-                padding:'6px 14px', borderRadius:9, fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:1,
-                background: range===r ? '#6366f1' : 'transparent',
-                color: range===r ? '#fff' : '#475569', border:'none', cursor:'pointer', transition:'all .2s'
-              }}>{r==='today'?'Today':r==='week'?'7D':'Month'}</button>
+              <button key={r} onClick={()=>setRange(r)}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all ${
+                  range===r ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-gray-700'
+                }`}>
+                {r==='today'?'Today':r==='week'?'7 Days':'Month'}
+              </button>
             ))}
           </div>
-          <button onClick={()=>navigate('/sales/invoice')} style={{
-            display:'flex', alignItems:'center', gap:6, padding:'8px 18px',
-            background:'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius:12, border:'none',
-            color:'#fff', fontSize:11, fontWeight:800, cursor:'pointer', letterSpacing:1,
-            boxShadow:'0 4px 20px rgba(99,102,241,0.4)'
-          }}>
-            <Plus size={14}/> NEW INVOICE
+          <button onClick={()=>navigate('/sales/invoice')}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-[11px] uppercase shadow-md transition-all">
+            <Plus size={14}/> New Invoice
           </button>
         </div>
       </div>
 
-      {/* ── STATS ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+      {/* ── LOW STOCK ALERT ── */}
+      {lowStock.length > 0 && (
+        <div onClick={()=>navigate('/inventory')}
+          className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl cursor-pointer hover:bg-red-100 transition">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center">
+              <AlertTriangle size={18} className="text-red-600"/>
+            </div>
+            <div>
+              <p className="font-black text-sm">⚠️ Low Stock Alert — {lowStock.length} items</p>
+              <p className="text-[10px] font-bold text-red-400">{lowStock.map(i=>i.name).slice(0,4).join(' · ')}</p>
+            </div>
+          </div>
+          <ChevronRight size={18}/>
+        </div>
+      )}
+
+      {/* ── STAT CARDS ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label:'Total Revenue', value:`LKR ${(stats.revenue/1000).toFixed(1)}K`, sub: `${stats.invoices} invoices`, color:'#6366f1', icon:'💰' },
-          { label:'Avg Invoice', value:`LKR ${Math.round(stats.avg).toLocaleString()}`, sub:'per transaction', color:'#8b5cf6', icon:'📊' },
-          { label:'Discounts Given', value:`LKR ${Math.round(stats.discount).toLocaleString()}`, sub:'total savings', color:'#f59e0b', icon:'🏷️' },
-          { label:'Stock Alerts', value:lowStock.length, sub: lowStock.length ? lowStock[0]?.name : 'All good', color: lowStock.length ? '#ef4444' : '#10b981', icon: lowStock.length ? '⚠️' : '✅' },
-        ].map(({ label, value, sub, color, icon }) => (
-          <div key={label} style={{ background:'#0f172a', borderRadius:16, padding:'18px 20px', border:'1px solid #1e293b', position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', top:-10, right:-10, fontSize:40, opacity:0.07 }}>{icon}</div>
-            <p style={{ fontSize:10, fontWeight:800, color:'#475569', letterSpacing:2, textTransform:'uppercase', marginBottom:6 }}>{label}</p>
-            <p style={{ fontSize:22, fontWeight:900, color, margin:'0 0 4px', letterSpacing:-0.5 }}>{value}</p>
-            <p style={{ fontSize:10, color:'#334155', fontWeight:600 }}>{sub}</p>
-            <div style={{ position:'absolute', bottom:0, left:0, right:0, height:2, background:`linear-gradient(90deg,${color}44,${color})` }}/>
+          { label:'Revenue', value:`LKR ${(stats.revenue/1000).toFixed(1)}K`, sub:`${stats.invoices} invoices`, Icon:DollarSign, accent:'indigo' },
+          { label:'Avg Invoice', value:`LKR ${Math.round(stats.avg).toLocaleString()}`, sub:'per transaction', Icon:ShoppingCart, accent:'violet' },
+          { label:'Total Discount', value:`LKR ${Math.round(stats.discount).toLocaleString()}`, sub:'given away', Icon:Tag, accent:'amber' },
+          { label:'Stock Alerts', value:String(lowStock.length), sub: lowStock.length ? 'items need restock' : 'All good!', Icon:Package, accent: lowStock.length?'red':'emerald' },
+        ].map(({ label, value, sub, Icon, accent }) => (
+          <div key={label} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 bg-${accent}-50`}>
+              <Icon size={18} className={`text-${accent}-600`}/>
+            </div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</p>
+            <p className={`text-xl font-black text-${accent}-600 mt-1`}>{value}</p>
+            <p className="text-[10px] text-gray-400 font-semibold mt-0.5">{sub}</p>
           </div>
         ))}
       </div>
 
-      {/* ── MAIN CHARTS ROW ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+      {/* ── CHARTS ROW ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Area Chart */}
-        <div style={{ background:'#0f172a', borderRadius:20, padding:'20px 20px 12px', border:'1px solid #1e293b' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+        <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="flex justify-between items-center mb-4">
             <div>
-              <p style={{ fontSize:11, fontWeight:900, color:'#6366f1', letterSpacing:2, textTransform:'uppercase' }}>Sales Trend</p>
-              <p style={{ fontSize:10, color:'#334155', marginTop:2 }}>Revenue over time</p>
+              <p className="text-sm font-black text-gray-800">Sales Trend</p>
+              <p className="text-[10px] text-gray-400 font-semibold">{range==='today'?'Today':range==='week'?'Last 7 days':'This month'}</p>
             </div>
-            <TrendingUp size={16} color="#6366f1"/>
+            <TrendingUp size={16} className="text-indigo-400"/>
           </div>
           {areaData.length === 0 ? (
-            <div style={{ height:180, display:'flex', alignItems:'center', justifyContent:'center', color:'#1e293b', fontWeight:700, fontSize:13 }}>No data</div>
+            <div className="h-48 flex flex-col items-center justify-center text-gray-200">
+              <Package size={28} className="mb-2"/><p className="font-bold text-sm">No data</p>
+            </div>
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={areaData}>
                 <defs>
                   <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                    <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.15}/>
                     <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false}/>
-                <XAxis dataKey="label" tick={{fontSize:9,fill:'#475569',fontWeight:700}} axisLine={false} tickLine={false}/>
-                <YAxis tick={{fontSize:9,fill:'#475569'}} tickFormatter={v=>`${(v/1000).toFixed(0)}k`} axisLine={false} tickLine={false}/>
-                <Tooltip contentStyle={{background:'#1e293b',border:'none',borderRadius:10,fontSize:11,fontWeight:700,color:'#e2e8f0'}}
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
+                <XAxis dataKey="label" tick={{fontSize:9,fill:'#94a3b8',fontWeight:700}} axisLine={false} tickLine={false}/>
+                <YAxis tick={{fontSize:9,fill:'#94a3b8'}} tickFormatter={v=>`${(v/1000).toFixed(0)}k`} axisLine={false} tickLine={false}/>
+                <Tooltip
+                  contentStyle={{borderRadius:12,border:'1px solid #e2e8f0',boxShadow:'0 4px 20px rgba(0,0,0,0.08)',fontSize:11,fontWeight:700}}
                   formatter={(v:any)=>[`LKR ${Number(v).toLocaleString()}`,'Sales']}/>
-                <Area type="monotone" dataKey="amt" stroke="#6366f1" strokeWidth={2} fill="url(#grad)" dot={{fill:'#6366f1',r:3,strokeWidth:0}}/>
+                <Area type="monotone" dataKey="amt" stroke="#6366f1" strokeWidth={2.5} fill="url(#grad)"
+                  dot={{fill:'#6366f1',r:3,strokeWidth:0}} activeDot={{r:5,fill:'#6366f1'}}/>
               </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
 
-        {/* Donut Chart */}
-        <div style={{ background:'#0f172a', borderRadius:20, padding:'20px', border:'1px solid #1e293b' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+        {/* Donut */}
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="flex justify-between items-center mb-3">
             <div>
-              <p style={{ fontSize:11, fontWeight:900, color:'#8b5cf6', letterSpacing:2, textTransform:'uppercase' }}>Item-wise Sales</p>
-              <p style={{ fontSize:10, color:'#334155', marginTop:2 }}>Revenue by product</p>
+              <p className="text-sm font-black text-gray-800">Item-wise Sales</p>
+              <p className="text-[10px] text-gray-400 font-semibold">Revenue by product</p>
             </div>
-            <Package size={16} color="#8b5cf6"/>
+            <Package size={16} className="text-violet-400"/>
           </div>
           {pieData.length === 0 ? (
-            <div style={{ height:180, display:'flex', alignItems:'center', justifyContent:'center', color:'#1e293b', fontWeight:700, fontSize:13 }}>No data</div>
+            <div className="h-48 flex flex-col items-center justify-center text-gray-200">
+              <Package size={28} className="mb-2"/><p className="font-bold text-sm">No data</p>
+            </div>
           ) : (
-            <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-              <div style={{ flex:'0 0 160px' }}>
-                <ResponsiveContainer width={160} height={160}>
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70}
-                      dataKey="value" activeIndex={activePie}
-                      activeShape={(props:any) => {
-                        const { cx,cy,innerRadius,outerRadius,startAngle,endAngle,fill,payload,value,percent } = props;
-                        return (
-                          <g>
-                            <text x={cx} y={cy-8} textAnchor="middle" fill="#e2e8f0" style={{fontSize:9,fontWeight:900}}>{(payload.name||'').slice(0,12)}</text>
-                            <text x={cx} y={cy+7} textAnchor="middle" fill={fill} style={{fontSize:9,fontWeight:900}}>{(percent*100).toFixed(0)}%</text>
-                            <path d={`M${cx},${cy}`} fill="none"/>
-                            <circle cx={cx} cy={cy} r={innerRadius-1} fill="#070b14"/>
-                            <path d={`M${cx + (outerRadius+6) * Math.cos((-startAngle*Math.PI/180))} ${cy}`} fill="none"/>
-                          </g>
-                        );
-                      }}
-                      onMouseEnter={(_,i)=>setActivePie(i)}
-                    >
-                      {pieData.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]} stroke="none"/>)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div style={{ flex:1, display:'flex', flexDirection:'column', gap:5, maxHeight:160, overflowY:'auto' }}>
+            <div className="flex flex-col items-center">
+              <ResponsiveContainer width="100%" height={160}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={72}
+                    dataKey="value" activeIndex={activePie}
+                    onMouseEnter={(_,i)=>setActivePie(i)}
+                    activeShape={(props:any) => {
+                      const {cx,cy,innerRadius,outerRadius,startAngle,endAngle,fill,payload,percent} = props;
+                      return (
+                        <g>
+                          <text x={cx} y={cy-8} textAnchor="middle" fill="#1e293b" style={{fontSize:10,fontWeight:900}}>
+                            {(payload.name||'').slice(0,13)}
+                          </text>
+                          <text x={cx} y={cy+8} textAnchor="middle" fill={fill} style={{fontSize:10,fontWeight:900}}>
+                            {(percent*100).toFixed(0)}%
+                          </text>
+                          <circle cx={cx} cy={cy} r={innerRadius-1} fill="white"/>
+                          <path d={`M${cx},${cy}`} fill="none"/>
+                        </g>
+                      );
+                    }}
+                  >
+                    {pieData.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]} stroke="none"/>)}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Legend */}
+              <div className="w-full space-y-1.5 mt-1 max-h-28 overflow-y-auto">
                 {pieData.map((item,i)=>(
-                  <div key={i} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', opacity: activePie===i ? 1 : 0.6, transition:'opacity .2s' }}
-                    onMouseEnter={()=>setActivePie(i)}>
-                    <div style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background:COLORS[i%COLORS.length] }}/>
-                    <span style={{ fontSize:9, fontWeight:700, color:'#94a3b8', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.name}</span>
-                    <span style={{ fontSize:9, fontWeight:900, color:COLORS[i%COLORS.length] }}>LKR {(item.value/1000).toFixed(1)}K</span>
+                  <div key={i} className="flex items-center gap-2 cursor-pointer" onMouseEnter={()=>setActivePie(i)}>
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{background:COLORS[i%COLORS.length]}}/>
+                    <span className="text-[10px] font-bold text-gray-600 flex-1 truncate">{item.name}</span>
+                    <span className="text-[10px] font-black text-gray-500">LKR {(item.value/1000).toFixed(1)}K</span>
                   </div>
                 ))}
               </div>
@@ -257,28 +242,29 @@ export default function SalesDashboard() {
       </div>
 
       {/* ── BOTTOM ROW ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-        {/* Bar Chart - Top customers */}
-        <div style={{ background:'#0f172a', borderRadius:20, padding:'20px', border:'1px solid #1e293b' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <p style={{ fontSize:11, fontWeight:900, color:'#06b6d4', letterSpacing:2, textTransform:'uppercase' }}>Top Customers</p>
-            <Users size={14} color="#06b6d4"/>
+        {/* Top Customers */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm font-black text-gray-800">Top Customers</p>
+            <Users size={15} className="text-cyan-500"/>
           </div>
           {topCustomers.length === 0 ? (
-            <p style={{ color:'#1e293b', fontWeight:700, fontSize:12, textAlign:'center', marginTop:40 }}>No data</p>
+            <p className="text-gray-200 font-bold text-sm text-center mt-8">No data</p>
           ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <div className="space-y-3">
               {topCustomers.map((c,i)=>{
-                const pct = (c.value / topCustomers[0].value) * 100;
+                const pct = (c.value/topCustomers[0].value)*100;
                 return (
                   <div key={i}>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
-                      <span style={{ fontSize:10, fontWeight:800, color:'#94a3b8' }}>{c.name.slice(0,18)}</span>
-                      <span style={{ fontSize:10, fontWeight:900, color:'#06b6d4' }}>LKR {Math.round(c.value).toLocaleString()}</span>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-[10px] font-black text-gray-600 truncate max-w-[130px]">{c.name}</span>
+                      <span className="text-[10px] font-black text-indigo-600">LKR {Math.round(c.value).toLocaleString()}</span>
                     </div>
-                    <div style={{ height:4, borderRadius:4, background:'#1e293b', overflow:'hidden' }}>
-                      <div style={{ height:'100%', width:`${pct}%`, background:'linear-gradient(90deg,#06b6d4,#6366f1)', borderRadius:4, transition:'width .5s' }}/>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500"
+                        style={{width:`${pct}%`, background:`linear-gradient(90deg,#6366f1,#8b5cf6)`}}/>
                     </div>
                   </div>
                 );
@@ -288,43 +274,45 @@ export default function SalesDashboard() {
         </div>
 
         {/* Recent Invoices */}
-        <div style={{ background:'#0f172a', borderRadius:20, padding:'20px', border:'1px solid #1e293b' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <p style={{ fontSize:11, fontWeight:900, color:'#10b981', letterSpacing:2, textTransform:'uppercase' }}>Recent Invoices</p>
-            <FileText size={14} color="#10b981"/>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm font-black text-gray-800">Recent Invoices</p>
+            <FileText size={15} className="text-emerald-500"/>
           </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            {recent.length === 0 ? (
-              <p style={{ color:'#1e293b', fontWeight:700, fontSize:12, textAlign:'center', marginTop:40 }}>No invoices</p>
-            ) : recent.map(inv=>(
-              <div key={inv.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 10px', background:'#0a1628', borderRadius:10, border:'1px solid #1e293b' }}>
-                <div>
-                  <p style={{ fontSize:10, fontWeight:800, color:'#e2e8f0', marginBottom:1 }}>{(inv.customers?.full_name||'Customer').slice(0,16)}</p>
-                  <p style={{ fontSize:9, color:'#334155', fontWeight:600 }}>#{inv.invoice_no}</p>
+          {recent.length === 0 ? (
+            <p className="text-gray-200 font-bold text-sm text-center mt-8">No invoices</p>
+          ) : (
+            <div className="space-y-2">
+              {recent.map(inv=>(
+                <div key={inv.id} className="flex justify-between items-center p-2.5 bg-gray-50 rounded-xl hover:bg-indigo-50 transition cursor-pointer">
+                  <div>
+                    <p className="text-[11px] font-black text-gray-700 truncate max-w-[130px]">{inv.customers?.full_name||'Customer'}</p>
+                    <p className="text-[9px] text-gray-400 font-bold">#{inv.invoice_no}</p>
+                  </div>
+                  <p className="text-[11px] font-black text-indigo-600">LKR {Number(inv.net_amount||inv.total_amount||0).toLocaleString()}</p>
                 </div>
-                <span style={{ fontSize:10, fontWeight:900, color:'#10b981' }}>LKR {Number(inv.net_amount||inv.total_amount||0).toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Low Stock */}
-        <div style={{ background:'#0f172a', borderRadius:20, padding:'20px', border:'1px solid #1e293b' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <p style={{ fontSize:11, fontWeight:900, color: lowStock.length ? '#ef4444' : '#10b981', letterSpacing:2, textTransform:'uppercase' }}>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm font-black text-gray-800">
               {lowStock.length ? '⚠️ Low Stock' : '✅ Stock OK'}
             </p>
-            <AlertTriangle size={14} color={lowStock.length ? '#ef4444' : '#10b981'}/>
+            <AlertTriangle size={15} className={lowStock.length?'text-red-400':'text-emerald-400'}/>
           </div>
           {lowStock.length === 0 ? (
-            <p style={{ color:'#10b981', fontWeight:700, fontSize:12, textAlign:'center', marginTop:40 }}>All items stocked</p>
+            <p className="text-emerald-500 font-bold text-sm text-center mt-8">All items stocked!</p>
           ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <div className="space-y-2">
               {lowStock.slice(0,6).map((item,i)=>(
-                <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 10px', background:'#1a0a0a', borderRadius:10, border:'1px solid #2d1515', cursor:'pointer' }}
+                <div key={i} className="flex justify-between items-center p-2.5 bg-red-50 rounded-xl cursor-pointer hover:bg-red-100 transition"
                   onClick={()=>navigate('/inventory')}>
-                  <span style={{ fontSize:10, fontWeight:800, color:'#fca5a5' }}>{item.name.slice(0,18)}</span>
-                  <span style={{ fontSize:10, fontWeight:900, color:'#ef4444', background:'#2d1515', padding:'2px 8px', borderRadius:6 }}>{item.quantity} left</span>
+                  <span className="text-[10px] font-black text-red-700 truncate max-w-[140px]">{item.name}</span>
+                  <span className="text-[10px] font-black text-white bg-red-500 px-2 py-0.5 rounded-full">{item.quantity} left</span>
                 </div>
               ))}
             </div>
