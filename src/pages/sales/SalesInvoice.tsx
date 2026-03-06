@@ -408,29 +408,26 @@ const SalesInvoice = () => {
   };
 
   const getFreshInvoiceNo = async (): Promise<string> => {
+    // Get MAX invoice number from DB - most reliable approach
     const { data } = await supabase
       .from('invoices')
       .select('invoice_no')
       .eq('company_id', company?.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .ilike('invoice_no', 'INV-%');
     if (data && data.length > 0) {
-      const parts = data[0].invoice_no.split('-');
-      const num = parts.length > 1 ? parseInt(parts[parts.length - 1]) : 0;
-      return `INV-${(num + 1).toString().padStart(5, '0')}`;
+      const maxNum = data.reduce((max, d) => {
+        const parts = d.invoice_no?.split('-') || [];
+        const num = parts.length > 1 ? parseInt(parts[parts.length - 1]) || 0 : 0;
+        return num > max ? num : max;
+      }, 0);
+      return `INV-${(maxNum + 1).toString().padStart(5, '0')}`;
     }
     return 'INV-00001';
   };
 
   const generateNextInvoiceNo = async () => {
-    const { data } = await supabase.from('invoices').select('invoice_no').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(1);
-    if (data && data.length > 0) {
-      const parts = data[0].invoice_no.split('-');
-      const num = parts.length > 1 ? parseInt(parts[1]) : 0;
-      setInvoiceNo(`INV-${(num + 1).toString().padStart(5, '0')}`);
-    } else {
-      setInvoiceNo('INV-00001');
-    }
+    const next = await getFreshInvoiceNo();
+    setInvoiceNo(next);
   };
 
   const searchInvoices = async (query: string) => {
@@ -484,8 +481,12 @@ const SalesInvoice = () => {
     setEditingInvoiceId(null);
     setItems([{ inventory_id: '', cases: '', qty_bottles: '', units_per_case: 12, unit_price: 0, mrp_price: 0, special_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
     setVehicleNo(''); setDriverName(''); setDispatchNo('');
+    setInvoiceDate(new Date().toISOString().split('T')[0]);
     setCustomerDetails(null); setSearchQuery(''); setSearchResults([]);
+    sessionStorage.removeItem('_activeDraftId');
     fetchData();
+    generateNextInvoiceNo();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const calculateLineTotal = (line: any) => {
@@ -707,6 +708,7 @@ const SalesInvoice = () => {
       alert(`✅ Invoice ${freshInvoiceNo} ${editingInvoiceId ? 'updated' : 'saved'} successfully!`);
       window.print();
       resetForm();
+      fetchRecentInvoices();
     } catch (err: any) {
       console.error('Save error:', err);
       alert("Save failed: " + (err.message || "Unknown error"));
