@@ -3,6 +3,7 @@ import { supabase } from '../../supabaseClient';
 import { Plus, Trash2, Save, ArrowLeft, Loader2, Filter, Edit } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCompany } from '../../utils/useCompany';
+import { logActivity } from '../../utils/activityLogger';
 
 interface GRNItem {
   id?: string;
@@ -127,7 +128,7 @@ const AddGRNPage = () => {
   // ── SAVE via RPC (properly reverses old stock on edit) ───────────────────
   const handleSaveGRN = async () => {
     if (!grnData.supplier_id || items.some(i => !i.product_id)) {
-      return alert("කරුණාකර සියලු විස්තර සම්පූර්ණ කරන්න!");
+      return alert("Please complete all required fields!");
     }
     setLoading(true);
     try {
@@ -156,7 +157,7 @@ const AddGRNPage = () => {
 
       if (error) throw error;
 
-      alert(editId ? "✅ GRN එක යාවත්කාලීන කරන ලදී!" : "✅ GRN එක සාර්ථකව ඇතුළත් කරන ලදී!");
+      alert(editId ? "✅ GRN updated successfully!" : "✅ GRN saved successfully!");
       setEditId(null);
       setGrnData({
         grn_no:      `GRN-${Date.now().toString().slice(-6)}`,

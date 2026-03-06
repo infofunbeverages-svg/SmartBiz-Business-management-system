@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Trash2, Save, Loader2, Search, List, Edit } from 'lucide-react';
 import { useCompany } from '../../utils/useCompany';
+import { logActivity } from '../../utils/activityLogger';
 import { useLocation } from 'react-router-dom';
 import InvoiceTemplate from '../../components/common/InvoiceTemplate';
 
@@ -406,8 +407,23 @@ const SalesInvoice = () => {
     setDraftList(data || []);
   };
 
+  const getFreshInvoiceNo = async (): Promise<string> => {
+    const { data } = await supabase
+      .from('invoices')
+      .select('invoice_no')
+      .eq('company_id', company?.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (data && data.length > 0) {
+      const parts = data[0].invoice_no.split('-');
+      const num = parts.length > 1 ? parseInt(parts[parts.length - 1]) : 0;
+      return `INV-${(num + 1).toString().padStart(5, '0')}`;
+    }
+    return 'INV-00001';
+  };
+
   const generateNextInvoiceNo = async () => {
-    const { data } = await supabase.from('invoices').select('invoice_no').eq('company_id', company?.id).order('invoice_no', { ascending: false }).limit(1);
+    const { data } = await supabase.from('invoices').select('invoice_no').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(1);
     if (data && data.length > 0) {
       const parts = data[0].invoice_no.split('-');
       const num = parts.length > 1 ? parseInt(parts[1]) : 0;
@@ -641,8 +657,13 @@ const SalesInvoice = () => {
         if (!window.confirm(msg)) return;
       }
     }
+    if (isSaving) return;
     setIsSaving(true);
     try {
+      const originalInvoiceNo = invoiceNo;
+      const freshInvoiceNo = editingInvoiceId ? invoiceNo : await getFreshInvoiceNo();
+      setInvoiceNo(freshInvoiceNo);
+
       const itemsForRPC = items.filter(i => i.inventory_id).map(i => ({
         inventory_id:      i.inventory_id,
         cases:             Number(i.cases || 0),
@@ -656,7 +677,7 @@ const SalesInvoice = () => {
       const { error } = await supabase.rpc('create_invoice_and_deduct_stock', {
         p_company_id:  company?.id,
         p_customer_id: customerDetails.id,
-        p_invoice_no:  invoiceNo,
+        p_invoice_no:  freshInvoiceNo,
         p_vehicle_no:  vehicleNo,
         p_driver_name: driverName,
         p_dispatch_no: dispatchNo,
@@ -666,13 +687,13 @@ const SalesInvoice = () => {
       });
       if (error) throw error;
 
-      await supabase.from('customer_ledger').delete().eq('customer_id', customerDetails.id).eq('type', 'Invoice').eq('reference', invoiceNo);
+      await supabase.from('customer_ledger').delete().eq('customer_id', customerDetails.id).eq('type', 'Invoice').eq('reference', editingInvoiceId ? originalInvoiceNo : freshInvoiceNo);
       await supabase.from('customer_ledger').insert([{
         customer_id: customerDetails.id,
         date:        invoiceDate,
         type:        'Invoice',
-        reference:   invoiceNo,
-        description: `Invoice ${invoiceNo} | ${invoiceDate} | LKR ${totalNet.toLocaleString()}`,
+        reference:   freshInvoiceNo,
+        description: `Invoice ${freshInvoiceNo} | ${invoiceDate} | LKR ${totalNet.toLocaleString()}`,
         debit:       totalNet,
         credit:      0,
         status:      'Open'
@@ -683,7 +704,7 @@ const SalesInvoice = () => {
         await supabase.from('draft_invoices').update({ status: 'Converted' }).eq('id', activeDraftId);
         sessionStorage.removeItem('_activeDraftId');
       }
-      alert(`✅ Invoice ${invoiceNo} ${editingInvoiceId ? 'updated' : 'saved'} successfully!`);
+      alert(`✅ Invoice ${freshInvoiceNo} ${editingInvoiceId ? 'updated' : 'saved'} successfully!`);
       window.print();
       resetForm();
     } catch (err: any) {
