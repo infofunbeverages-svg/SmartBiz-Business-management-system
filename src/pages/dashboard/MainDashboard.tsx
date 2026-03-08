@@ -235,259 +235,276 @@ const MainDashboard = () => {
   );
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 bg-slate-50 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-10">
+    <div className="bg-slate-50 min-h-screen pb-20 lg:pb-8">
 
-        {/* Header */}
-        <div className="flex justify-between items-center flex-wrap gap-4">
+      {/* ── MOBILE LAYOUT ── */}
+      <div className="lg:hidden px-3 pt-3 space-y-2">
+
+        {/* Header row */}
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900">
+            <h1 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900">
               SmartBiz <span className="text-blue-600">ERP</span>
             </h1>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">
-              Command Center · Real-time Updates
-            </p>
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Command Center</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {/* Date Filter Button */}
+          <div className="flex gap-1.5 items-center">
+            {/* Date Filter */}
             <div className="relative">
               <button
                 onClick={() => setShowFilter(!showFilter)}
-                className="bg-white border border-slate-200 text-slate-700 px-4 py-3 rounded-2xl shadow hover:shadow-md transition-all flex items-center gap-2 font-bold text-sm"
+                className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded-xl shadow flex items-center gap-1 font-bold text-[10px]"
               >
-                <Calendar size={16} className="text-blue-600" />
+                <Calendar size={11} className="text-blue-600" />
                 {activeLabel}
-                <ChevronDown size={14} className={`transition-transform ${showFilter ? 'rotate-180' : ''}`} />
+                <ChevronDown size={10} className={`transition-transform ${showFilter ? 'rotate-180' : ''}`} />
               </button>
-
-              {/* Dropdown */}
               {showFilter && (
-                <div className="absolute right-0 top-14 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 w-64 p-3 space-y-1">
-                  {/* Presets */}
+                <div className="absolute right-0 top-9 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 w-56 p-2.5 space-y-0.5">
                   {presetLabels.map(p => (
-                    <button
-                      key={p.key}
-                      onClick={() => handlePreset(p.key)}
-                      className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all
-                        ${preset === p.key && !customMode
-                          ? 'bg-blue-600 text-white'
-                          : 'text-slate-700 hover:bg-slate-100'}`}
-                    >
+                    <button key={p.key} onClick={() => handlePreset(p.key)}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all
+                        ${preset === p.key && !customMode ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
                       {p.label}
                     </button>
                   ))}
-
-                  {/* Divider */}
-                  <div className="border-t border-slate-100 my-2" />
-
-                  {/* Custom Range */}
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 pb-1">Custom Range</p>
-                  <div className="space-y-2 px-1">
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">From</label>
-                      <input
-                        type="date"
-                        value={startDate}
-                        onChange={e => { setStartDate(e.target.value); setCustomMode(true); setPreset('all'); }}
-                        className="w-full mt-1 p-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">To</label>
-                      <input
-                        type="date"
-                        value={endDate}
-                        onChange={e => { setEndDate(e.target.value); setCustomMode(true); setPreset('all'); }}
-                        className="w-full mt-1 p-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold"
-                      />
-                    </div>
-                    <button
-                      onClick={handleCustomApply}
-                      className="w-full bg-blue-600 text-white py-2 rounded-xl text-sm font-black hover:bg-blue-700 transition-all"
-                    >
-                      Apply
-                    </button>
-                  </div>
+                  <div className="border-t border-slate-100 my-1.5" />
+                  <p className="text-[9px] font-black text-slate-400 uppercase px-1">Custom</p>
+                  <input type="date" value={startDate}
+                    onChange={e => { setStartDate(e.target.value); setCustomMode(true); setPreset('all'); }}
+                    className="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold mb-1" />
+                  <input type="date" value={endDate}
+                    onChange={e => { setEndDate(e.target.value); setCustomMode(true); setPreset('all'); }}
+                    className="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold mb-1" />
+                  <button onClick={handleCustomApply}
+                    className="w-full bg-blue-600 text-white py-1.5 rounded-xl text-xs font-black">Apply</button>
                 </div>
               )}
             </div>
-
-            <button
-              onClick={fetchStats}
-              className="bg-slate-100 text-slate-600 p-3 rounded-2xl shadow hover:bg-slate-200 transition-all"
-            >
-              <RefreshCw size={20} />
-            </button>
-            <button
-              onClick={() => navigate('/sales/new-invoice')}
-              className="bg-blue-600 text-white px-5 py-3 rounded-2xl shadow-lg hover:scale-105 transition-all flex items-center gap-2 font-bold"
-            >
-              <Plus size={20} /> New Invoice
+            <button onClick={fetchStats} className="bg-white border border-slate-200 p-1.5 rounded-xl shadow">
+              <RefreshCw size={14} className="text-slate-500" />
             </button>
           </div>
         </div>
 
-        {/* Active filter badge */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Showing data for:</span>
-          <span className="bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+        {/* Filter badge */}
+        <div className="flex items-center gap-1.5">
+          <span className="bg-blue-100 text-blue-700 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">
             {customMode ? `${startDate} → ${endDate}` : activeLabel}
           </span>
-          {(preset !== 'all' || customMode) && (
-            <span className="text-[9px] text-slate-400">
-              · Stock On Hand & Fleet Payable always show current totals
-            </span>
-          )}
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* Main stats - 2 col grid, all cards same height */}
+        <div className="grid grid-cols-2 gap-2">
 
-          {/* Received Goods */}
-          <div
-            onClick={() => navigate('/inventory/grn/new')}
-            className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]"
-          >
-            <div className="bg-emerald-50 text-emerald-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-              <ArrowDownLeft size={22} />
+          {/* Received GRN */}
+          <div onClick={() => navigate('/inventory/grn/new')}
+            className="bg-white rounded-2xl p-3 shadow-sm cursor-pointer active:scale-[0.97] transition-all border border-slate-100">
+            <div className="bg-emerald-50 w-7 h-7 rounded-lg flex items-center justify-center mb-2">
+              <ArrowDownLeft size={14} className="text-emerald-600" />
             </div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Received Goods (GRN)</p>
-            <h3 className="text-2xl sm:text-3xl font-black text-emerald-600 italic">
-              {fmtBtl(stats.receivedBottles)}
-            </h3>
-            <p className="text-[9px] text-slate-400 mt-2">{stats.receivedBottles.toLocaleString()} total bottles</p>
-            <div className="mt-3 flex items-center gap-1 text-emerald-600 font-bold text-[10px] uppercase">
-              Add GRN <ArrowUpRight size={11} />
-            </div>
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Received (GRN)</p>
+            <p className="text-base font-black text-emerald-600 leading-tight mt-0.5">{fmtBtl(stats.receivedBottles)}</p>
+            <p className="text-[7px] text-slate-400">{stats.receivedBottles.toLocaleString()} btl</p>
           </div>
 
-          {/* Issued Goods */}
-          <div
-            onClick={() => navigate('/sales/new-invoice')}
-            className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]"
-          >
-            <div className="bg-blue-50 text-blue-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-blue-600 group-hover:text-white transition-all">
-              <ArrowUpRight size={22} />
+          {/* Issued Invoice */}
+          <div onClick={() => navigate('/sales/new-invoice')}
+            className="bg-white rounded-2xl p-3 shadow-sm cursor-pointer active:scale-[0.97] transition-all border border-slate-100">
+            <div className="bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center mb-2">
+              <ArrowUpRight size={14} className="text-blue-600" />
             </div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Issued Goods (Invoice)</p>
-            <h3 className="text-2xl sm:text-3xl font-black text-blue-600 italic">
-              {fmtBtl(stats.issuedBottles)}
-            </h3>
-            <p className="text-[9px] text-slate-400 mt-2">{stats.issuedBottles.toLocaleString()} total bottles</p>
-            <div className="mt-3 flex items-center gap-1 text-blue-600 font-bold text-[10px] uppercase">
-              New Invoice <ArrowUpRight size={11} />
-            </div>
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Issued (Invoice)</p>
+            <p className="text-base font-black text-blue-600 leading-tight mt-0.5">{fmtBtl(stats.issuedBottles)}</p>
+            <p className="text-[7px] text-slate-400">{stats.issuedBottles.toLocaleString()} btl</p>
           </div>
 
-          {/* Returns & Deductions */}
-          <div
-            onClick={() => navigate('/inventory/returns')}
-            className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]"
-          >
-            <div className="bg-orange-50 text-orange-500 p-3 rounded-2xl w-fit mb-4 group-hover:bg-orange-500 group-hover:text-white transition-all">
-              <RotateCcw size={22} />
+          {/* Returns */}
+          <div onClick={() => navigate('/inventory/returns')}
+            className="bg-white rounded-2xl p-3 shadow-sm cursor-pointer active:scale-[0.97] transition-all border border-slate-100">
+            <div className="bg-orange-50 w-7 h-7 rounded-lg flex items-center justify-center mb-2">
+              <RotateCcw size={14} className="text-orange-500" />
             </div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Returns & Deductions</p>
-            <h3 className="text-xl sm:text-2xl font-black text-orange-500 italic">
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Returns</p>
+            <p className="text-base font-black text-orange-500 leading-tight mt-0.5">
               {fmtBtl(stats.returnBottles + stats.damageBottles + stats.sampleBottles + stats.packDmgBottles)}
-            </h3>
-            <div className="mt-1 space-y-0.5">
-              <p className="text-[9px] text-slate-500">↩ Market Return: {fmtBtl(stats.returnBottles)}</p>
-              <p className="text-[9px] text-red-400">↩ Damage Return: {fmtBtl(stats.damageBottles)}</p>
-              <p className="text-[9px] text-purple-400">✕ Samples: {fmtBtl(stats.sampleBottles)}</p>
-              <p className="text-[9px] text-slate-400">✕ Pack Damage: {fmtBtl(stats.packDmgBottles)}</p>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-orange-500 font-bold text-[10px] uppercase">
-              Add Return <ArrowUpRight size={11} />
-            </div>
-          </div>
-
-          {/* Stock On Hand - always current */}
-          <div
-            onClick={() => navigate('/inventory')}
-            className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]"
-          >
-            <div className="bg-slate-100 text-slate-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-slate-800 group-hover:text-white transition-all">
-              <Package size={22} />
-            </div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock On Hand</p>
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-800 italic">
-              {fmtBtl(stats.stockBottles)}
-            </h3>
-            <p className="text-[9px] text-slate-400 mt-2">{stats.stockBottles.toLocaleString()} total bottles</p>
-            <p className="text-[9px] text-blue-400 mt-0.5 font-bold">↑ Current snapshot</p>
-            <div className="mt-3 flex items-center gap-1 text-slate-600 font-bold text-[10px] uppercase">
-              Inventory <ArrowUpRight size={11} />
-            </div>
-          </div>
-
-          {/* Total Issued Wide */}
-          <div
-            onClick={() => navigate('/dashboard/sales')}
-            className="bg-blue-600 p-5 rounded-[2rem] shadow-xl cursor-pointer hover:bg-blue-700 transition-all col-span-2 active:scale-[0.97]"
-          >
-            <div className="bg-white/20 text-white p-3 rounded-2xl w-fit mb-4">
-              <ShoppingCart size={26} />
-            </div>
-            <p className="text-[9px] font-black text-blue-200 uppercase tracking-widest mb-1">
-              Total Issued · {customMode ? `${startDate} → ${endDate}` : activeLabel}
             </p>
-            <h3 className="text-3xl sm:text-4xl font-black text-white italic">
-              {fmtBtl(stats.issuedBottles)}
-            </h3>
-            <p className="text-[9px] text-blue-200 mt-2">{stats.issuedBottles.toLocaleString()} bottles invoiced</p>
-            <div className="mt-3 flex items-center gap-1 text-white font-bold text-[10px] uppercase">
-              View Sales <ArrowUpRight size={11} />
+            <div className="mt-0.5 space-y-0">
+              <p className="text-[6.5px] text-slate-500">↩ Mkt: {fmtBtl(stats.returnBottles)}</p>
+              <p className="text-[6.5px] text-red-400">↩ Dmg: {fmtBtl(stats.damageBottles)}</p>
+            </div>
+          </div>
+
+          {/* Stock */}
+          <div onClick={() => navigate('/inventory')}
+            className="bg-white rounded-2xl p-3 shadow-sm cursor-pointer active:scale-[0.97] transition-all border border-slate-100">
+            <div className="bg-slate-100 w-7 h-7 rounded-lg flex items-center justify-center mb-2">
+              <Package size={14} className="text-slate-600" />
+            </div>
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Stock On Hand</p>
+            <p className="text-base font-black text-slate-800 leading-tight mt-0.5">{fmtBtl(stats.stockBottles)}</p>
+            <p className="text-[7px] text-blue-400 font-bold">↑ Current</p>
+          </div>
+
+          {/* Total Issued - full width */}
+          <div onClick={() => navigate('/dashboard/sales')}
+            className="bg-blue-600 rounded-2xl p-3 shadow-sm cursor-pointer active:scale-[0.97] transition-all col-span-2 flex items-center justify-between">
+            <div>
+              <p className="text-[7px] font-black text-blue-200 uppercase tracking-wider">Total Issued · {activeLabel}</p>
+              <p className="text-xl font-black text-white leading-tight mt-0.5">{fmtBtl(stats.issuedBottles)}</p>
+              <p className="text-[7px] text-blue-200">{stats.issuedBottles.toLocaleString()} bottles invoiced</p>
+            </div>
+            <div className="bg-white/20 w-10 h-10 rounded-xl flex items-center justify-center">
+              <ShoppingCart size={20} className="text-white" />
             </div>
           </div>
 
           {/* Raw Materials */}
-          <div
-            onClick={() => navigate('/inventory/raw-materials/grn/new')}
-            className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]"
-          >
-            <div className="bg-amber-50 text-amber-500 p-3 rounded-2xl w-fit mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all">
-              <Box size={22} />
+          <div onClick={() => navigate('/inventory/raw-materials/grn/new')}
+            className="bg-white rounded-2xl p-3 shadow-sm cursor-pointer active:scale-[0.97] transition-all border border-slate-100">
+            <div className="bg-amber-50 w-7 h-7 rounded-lg flex items-center justify-center mb-2">
+              <Box size={14} className="text-amber-500" />
             </div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Raw Materials (GRN)</p>
-            <h3 className="text-2xl sm:text-3xl font-black text-amber-500 italic">
-              {stats.rawMaterials.toLocaleString()} Nos
-            </h3>
-            <p className="text-[9px] text-slate-400 mt-2">Updated from RM GRN</p>
-            <div className="mt-3 flex items-center gap-1 text-amber-500 font-bold text-[10px] uppercase">
-              Add RM GRN <ArrowUpRight size={11} />
-            </div>
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Raw Materials</p>
+            <p className="text-base font-black text-amber-500 leading-tight mt-0.5">{stats.rawMaterials.toLocaleString()}</p>
+            <p className="text-[7px] text-slate-400">Nos</p>
           </div>
 
           {/* Fleet */}
-          <div
-            onClick={() => navigate('/transport')}
-            className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]"
-          >
-            <div className="bg-rose-50 text-rose-500 p-3 rounded-2xl w-fit mb-4 group-hover:bg-rose-500 group-hover:text-white transition-all">
-              <Truck size={22} />
+          <div onClick={() => navigate('/transport')}
+            className="bg-white rounded-2xl p-3 shadow-sm cursor-pointer active:scale-[0.97] transition-all border border-slate-100">
+            <div className="bg-rose-50 w-7 h-7 rounded-lg flex items-center justify-center mb-2">
+              <Truck size={14} className="text-rose-500" />
             </div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Fleet Payable</p>
-            <h3 className="text-2xl sm:text-3xl font-black text-rose-500 italic">
-              LKR {stats.transportNet.toLocaleString()}
-            </h3>
-            <p className="text-[9px] text-slate-400 mt-2">Hire cost minus advance paid</p>
-            <div className="mt-3 flex items-center gap-1 text-rose-500 font-bold text-[10px] uppercase">
-              Manage Fleet <ArrowUpRight size={11} />
-            </div>
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Fleet Payable</p>
+            <p className="text-base font-black text-rose-500 leading-tight mt-0.5">
+              {stats.transportNet === 0 ? 'LKR 0' : `LKR ${stats.transportNet.toLocaleString()}`}
+            </p>
+            <p className="text-[7px] text-slate-400">Hire - Advance</p>
           </div>
 
         </div>
-
-        {/* Footer */}
-        <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-            GRN, Invoice, Returns — Filtered by {customMode ? `${startDate} → ${endDate}` : activeLabel} · Stock & Fleet always current
-          </p>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        </div>
-
       </div>
+
+      {/* ── DESKTOP LAYOUT (unchanged) ── */}
+      <div className="hidden lg:block p-6 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-10">
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900">
+                SmartBiz <span className="text-blue-600">ERP</span>
+              </h1>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Command Center · Real-time Updates</p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <div className="relative">
+                <button onClick={() => setShowFilter(!showFilter)}
+                  className="bg-white border border-slate-200 text-slate-700 px-4 py-3 rounded-2xl shadow hover:shadow-md transition-all flex items-center gap-2 font-bold text-sm">
+                  <Calendar size={16} className="text-blue-600" />
+                  {activeLabel}
+                  <ChevronDown size={14} className={`transition-transform ${showFilter ? 'rotate-180' : ''}`} />
+                </button>
+                {showFilter && (
+                  <div className="absolute right-0 top-14 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 w-64 p-3 space-y-1">
+                    {presetLabels.map(p => (
+                      <button key={p.key} onClick={() => handlePreset(p.key)}
+                        className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all
+                          ${preset === p.key && !customMode ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
+                        {p.label}
+                      </button>
+                    ))}
+                    <div className="border-t border-slate-100 my-2" />
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 pb-1">Custom Range</p>
+                    <div className="space-y-2 px-1">
+                      <input type="date" value={startDate}
+                        onChange={e => { setStartDate(e.target.value); setCustomMode(true); setPreset('all'); }}
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold" />
+                      <input type="date" value={endDate}
+                        onChange={e => { setEndDate(e.target.value); setCustomMode(true); setPreset('all'); }}
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold" />
+                      <button onClick={handleCustomApply}
+                        className="w-full bg-blue-600 text-white py-2 rounded-xl text-sm font-black">Apply</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button onClick={fetchStats} className="bg-slate-100 text-slate-600 p-3 rounded-2xl shadow hover:bg-slate-200 transition-all">
+                <RefreshCw size={20} />
+              </button>
+              <button onClick={() => navigate('/sales/new-invoice')}
+                className="bg-blue-600 text-white px-5 py-3 rounded-2xl shadow-lg hover:scale-105 transition-all flex items-center gap-2 font-bold">
+                <Plus size={20} /> New Invoice
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Showing data for:</span>
+            <span className="bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+              {customMode ? `${startDate} → ${endDate}` : activeLabel}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div onClick={() => navigate('/inventory/grn/new')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
+              <div className="bg-emerald-50 text-emerald-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all"><ArrowDownLeft size={22}/></div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Received Goods (GRN)</p>
+              <h3 className="text-3xl font-black text-emerald-600 italic">{fmtBtl(stats.receivedBottles)}</h3>
+              <p className="text-[9px] text-slate-400 mt-2">{stats.receivedBottles.toLocaleString()} total bottles</p>
+              <div className="mt-3 flex items-center gap-1 text-emerald-600 font-bold text-[10px] uppercase">Add GRN <ArrowUpRight size={11}/></div>
+            </div>
+            <div onClick={() => navigate('/sales/new-invoice')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
+              <div className="bg-blue-50 text-blue-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-blue-600 group-hover:text-white transition-all"><ArrowUpRight size={22}/></div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Issued Goods (Invoice)</p>
+              <h3 className="text-3xl font-black text-blue-600 italic">{fmtBtl(stats.issuedBottles)}</h3>
+              <p className="text-[9px] text-slate-400 mt-2">{stats.issuedBottles.toLocaleString()} total bottles</p>
+              <div className="mt-3 flex items-center gap-1 text-blue-600 font-bold text-[10px] uppercase">New Invoice <ArrowUpRight size={11}/></div>
+            </div>
+            <div onClick={() => navigate('/inventory/returns')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
+              <div className="bg-orange-50 text-orange-500 p-3 rounded-2xl w-fit mb-4 group-hover:bg-orange-500 group-hover:text-white transition-all"><RotateCcw size={22}/></div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Returns & Deductions</p>
+              <h3 className="text-2xl font-black text-orange-500 italic">{fmtBtl(stats.returnBottles+stats.damageBottles+stats.sampleBottles+stats.packDmgBottles)}</h3>
+              <div className="mt-1 space-y-0.5">
+                <p className="text-[9px] text-slate-500">↩ Market: {fmtBtl(stats.returnBottles)}</p>
+                <p className="text-[9px] text-red-400">↩ Damage: {fmtBtl(stats.damageBottles)}</p>
+                <p className="text-[9px] text-purple-400">✕ Sample: {fmtBtl(stats.sampleBottles)}</p>
+                <p className="text-[9px] text-slate-400">✕ Pack: {fmtBtl(stats.packDmgBottles)}</p>
+              </div>
+            </div>
+            <div onClick={() => navigate('/inventory')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
+              <div className="bg-slate-100 text-slate-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-slate-800 group-hover:text-white transition-all"><Package size={22}/></div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock On Hand</p>
+              <h3 className="text-3xl font-black text-slate-800 italic">{fmtBtl(stats.stockBottles)}</h3>
+              <p className="text-[9px] text-slate-400 mt-2">{stats.stockBottles.toLocaleString()} total bottles</p>
+              <p className="text-[9px] text-blue-400 font-bold">↑ Current snapshot</p>
+            </div>
+            <div onClick={() => navigate('/dashboard/sales')} className="bg-blue-600 p-5 rounded-[2rem] shadow-xl cursor-pointer hover:bg-blue-700 transition-all col-span-2 active:scale-[0.97]">
+              <div className="bg-white/20 text-white p-3 rounded-2xl w-fit mb-4"><ShoppingCart size={26}/></div>
+              <p className="text-[9px] font-black text-blue-200 uppercase tracking-widest mb-1">Total Issued · {activeLabel}</p>
+              <h3 className="text-4xl font-black text-white italic">{fmtBtl(stats.issuedBottles)}</h3>
+              <p className="text-[9px] text-blue-200 mt-2">{stats.issuedBottles.toLocaleString()} bottles invoiced</p>
+            </div>
+            <div onClick={() => navigate('/inventory/raw-materials/grn/new')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
+              <div className="bg-amber-50 text-amber-500 p-3 rounded-2xl w-fit mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all"><Box size={22}/></div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Raw Materials (GRN)</p>
+              <h3 className="text-3xl font-black text-amber-500 italic">{stats.rawMaterials.toLocaleString()} Nos</h3>
+            </div>
+            <div onClick={() => navigate('/transport')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
+              <div className="bg-rose-50 text-rose-500 p-3 rounded-2xl w-fit mb-4 group-hover:bg-rose-500 group-hover:text-white transition-all"><Truck size={22}/></div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Fleet Payable</p>
+              <h3 className="text-3xl font-black text-rose-500 italic">LKR {stats.transportNet.toLocaleString()}</h3>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
+              GRN, Invoice, Returns — Filtered by {customMode ? `${startDate} → ${endDate}` : activeLabel} · Stock & Fleet always current
+            </p>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 };
