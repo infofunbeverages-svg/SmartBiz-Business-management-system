@@ -564,7 +564,7 @@ export default function ReportsPage() {
       <div className="print:hidden flex flex-col h-screen">
 
         {/* Top Bar */}
-        <div className="bg-white border-b px-6 py-3 flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
+        <div className="bg-white border-b px-3 lg:px-6 py-2 lg:py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-lg font-black text-gray-900 uppercase tracking-tight">📊 System Reports</h1>
@@ -619,8 +619,8 @@ export default function ReportsPage() {
         {/* Body */}
         <div className="flex flex-1 overflow-hidden">
 
-          {/* Sidebar */}
-          <div className="w-60 bg-white border-r overflow-y-auto flex-shrink-0">
+          {/* Sidebar - hidden on mobile */}
+          <div className="hidden lg:block w-60 bg-white border-r overflow-y-auto flex-shrink-0">
             {GROUPS.map(group => {
               const GIcon   = group.icon;
               const gc      = COLORS[group.color];
@@ -657,7 +657,19 @@ export default function ReportsPage() {
           </div>
 
           {/* Main */}
-          <div className="flex-1 overflow-auto p-5">
+          <div className="flex-1 overflow-auto p-3 lg:p-5 relative">
+            {/* Mobile sub-report tabs */}
+            {activeGroup && (
+              <div className="lg:hidden flex gap-1.5 overflow-x-auto mb-3 pb-1">
+                {GROUPS.find((g:any)=>g.id===activeGroup)?.reports.map((rpt:any) => (
+                  <button key={rpt.id}
+                    onClick={() => { setActiveReport(rpt.id); setData([]); setHasRun(false); }}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase whitespace-nowrap transition-all ${rpt.id === activeReport ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                    {rpt.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Report Header */}
             <div className={`rounded-2xl p-4 mb-4 border-2 flex items-center justify-between ${cl.header}`}>

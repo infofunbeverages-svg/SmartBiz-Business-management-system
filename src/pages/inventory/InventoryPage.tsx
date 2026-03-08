@@ -213,69 +213,111 @@ const InventoryPage = () => {
         />
       </div>
 
-      {/* Products Table */}
-      <Card className="rounded-[2.5rem] border-none shadow-xl overflow-hidden bg-white">
-        <CardContent className="p-0">
-          <TableView 
-            data={filteredProducts}
-            columns={[
-              { header: 'Product Details', accessorKey: 'name', cell: (r: any) => (
-                <div className="flex flex-col">
-                  <span className="font-black text-slate-800 uppercase italic">{r.name}</span>
-                  <span className="text-[9px] font-bold text-slate-400">SKU: {r.sku || 'N/A'} | Pack: {r.bottles_per_case} Btls</span>
+      {/* ── MOBILE: Card List ── */}
+      <div className="lg:hidden space-y-2">
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-10 text-slate-400 font-bold">No products found</div>
+        )}
+        {filteredProducts.map((r: any) => {
+          const bpc = r.bottles_per_case || 12;
+          const qty = r.quantity || 0;
+          const cs = Math.floor(qty / bpc);
+          const bt = qty % bpc;
+          return (
+            <div key={r.id} className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100">
+              {/* Row 1: Name + Stock */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-slate-800 uppercase italic text-sm leading-tight truncate">{r.name}</p>
+                  <p className="text-[9px] text-slate-400 font-bold mt-0.5">Pack: {bpc} Btls</p>
                 </div>
-              )},
-              { 
-                header: 'Current Stock', 
-                accessorKey: 'quantity', 
-                cell: (r: any) => {
-                  const bpc = r.bottles_per_case || 12;
-                  const qty = r.quantity || 0;
-                  return (
-                    <div className="flex items-center gap-2">
-                      <div className="font-black text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl border border-blue-100">
-                        {Math.floor(qty / bpc)} <span className="text-[9px] uppercase opacity-60">Cs</span> | {qty % bpc} <span className="text-[9px] uppercase opacity-60">Btl</span>
+                <div className={`font-black text-sm px-3 py-1 rounded-xl border whitespace-nowrap ${cs < 0 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                  {cs} <span className="text-[9px] opacity-60">CS</span> | {bt} <span className="text-[9px] opacity-60">BT</span>
+                </div>
+              </div>
+              {/* Row 2: Price + Actions */}
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex gap-3">
+                  <span className="text-[10px] font-bold text-slate-500">MRP <span className="text-slate-700">LKR {Number(r.price||0).toFixed(0)}</span></span>
+                  {r.special_price ? <span className="text-[10px] font-bold text-orange-500">🔥 {Number(r.special_price).toFixed(0)}</span> : null}
+                </div>
+                <div className="flex gap-1.5">
+                  <button onClick={() => { setSelectedProduct(r); setActiveModal('ADJUST'); }} className="p-2 bg-orange-50 text-orange-600 rounded-xl active:scale-90 transition-all"><PackagePlus size={15} /></button>
+                  <button onClick={() => { setSelectedProduct(r); setFormData({ name: r.name, price: r.price, special_price: r.special_price || 0, bottles_per_case: r.bottles_per_case, sku: r.sku, category: r.category }); setActiveModal('EDIT'); }} className="p-2 bg-blue-50 text-blue-600 rounded-xl active:scale-90 transition-all"><Pencil size={15} /></button>
+                  <button onClick={() => fetchItemHistory(r)} className="p-2 bg-slate-100 text-slate-600 rounded-xl active:scale-90 transition-all"><History size={15} /></button>
+                  <button onClick={() => handleDeleteProduct(r.id)} className="p-2 bg-red-50 text-red-500 rounded-xl active:scale-90 transition-all"><Trash2 size={15} /></button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── DESKTOP: Table ── */}
+      <div className="hidden lg:block">
+        <Card className="rounded-[2.5rem] border-none shadow-xl overflow-hidden bg-white">
+          <CardContent className="p-0">
+            <TableView 
+              data={filteredProducts}
+              columns={[
+                { header: 'Product Details', accessorKey: 'name', cell: (r: any) => (
+                  <div className="flex flex-col">
+                    <span className="font-black text-slate-800 uppercase italic">{r.name}</span>
+                    <span className="text-[9px] font-bold text-slate-400">SKU: {r.sku || 'N/A'} | Pack: {r.bottles_per_case} Btls</span>
+                  </div>
+                )},
+                { 
+                  header: 'Current Stock', 
+                  accessorKey: 'quantity', 
+                  cell: (r: any) => {
+                    const bpc = r.bottles_per_case || 12;
+                    const qty = r.quantity || 0;
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div className="font-black text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl border border-blue-100">
+                          {Math.floor(qty / bpc)} <span className="text-[9px] uppercase opacity-60">Cs</span> | {qty % bpc} <span className="text-[9px] uppercase opacity-60">Btl</span>
+                        </div>
                       </div>
+                    )
+                  } 
+                },
+                {
+                  header: 'Price / Special',
+                  accessorKey: 'price',
+                  cell: (r: any) => (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black text-gray-400 uppercase">MRP</span>
+                        <span className="font-black text-slate-700">LKR {Number(r.price || 0).toFixed(2)}</span>
+                      </div>
+                      {r.special_price ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black text-orange-400 uppercase">Special 🔥</span>
+                          <span className="font-black text-orange-600">LKR {Number(r.special_price).toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[9px] text-gray-300 font-bold">No special price</span>
+                      )}
                     </div>
                   )
-                } 
-              },
-              {
-                header: 'Price / Special',
-                accessorKey: 'price',
-                cell: (r: any) => (
-                  <div className="flex flex-col gap-1">
+                },
+                { 
+                  header: 'Actions', 
+                  accessorKey: 'id', 
+                  cell: (r: any) => (
                     <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-black text-gray-400 uppercase">MRP</span>
-                      <span className="font-black text-slate-700">LKR {Number(r.price || 0).toFixed(2)}</span>
+                      <button onClick={() => { setSelectedProduct(r); setActiveModal('ADJUST'); }} className="p-2.5 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-600 hover:text-white transition-all shadow-sm" title="Adjust Stock"><PackagePlus size={18} /></button>
+                      <button onClick={() => { setSelectedProduct(r); setFormData({ name: r.name, price: r.price, special_price: r.special_price || 0, bottles_per_case: r.bottles_per_case, sku: r.sku, category: r.category }); setActiveModal('EDIT'); }} className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Edit"><Pencil size={18} /></button>
+                      <button onClick={() => fetchItemHistory(r)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm" title="History"><History size={18} /></button>
+                      <button onClick={() => handleDeleteProduct(r.id)} className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Delete"><Trash2 size={18} /></button>
                     </div>
-                    {r.special_price ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black text-orange-400 uppercase">Special 🔥</span>
-                        <span className="font-black text-orange-600">LKR {Number(r.special_price).toFixed(2)}</span>
-                      </div>
-                    ) : (
-                      <span className="text-[9px] text-gray-300 font-bold">No special price</span>
-                    )}
-                  </div>
-                )
-              },
-              { 
-                header: 'Actions', 
-                accessorKey: 'id', 
-                cell: (r: any) => (
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => { setSelectedProduct(r); setActiveModal('ADJUST'); }} className="p-2.5 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-600 hover:text-white transition-all shadow-sm" title="Adjust Stock"><PackagePlus size={18} /></button>
-                    <button onClick={() => { setSelectedProduct(r); setFormData({ name: r.name, price: r.price, special_price: r.special_price || 0, bottles_per_case: r.bottles_per_case, sku: r.sku, category: r.category }); setActiveModal('EDIT'); }} className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Edit"><Pencil size={18} /></button>
-                    <button onClick={() => fetchItemHistory(r)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm" title="History"><History size={18} /></button>
-                    <button onClick={() => handleDeleteProduct(r.id)} className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Delete"><Trash2 size={18} /></button>
-                  </div>
-                )
-              }
-            ]}
-          />
-        </CardContent>
-      </Card>
+                  )
+                }
+              ]}
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* --- ADD / EDIT MODAL (අලුතින් නිවැරදි කළා) --- */}
       {(activeModal === 'ADD' || activeModal === 'EDIT') && (
