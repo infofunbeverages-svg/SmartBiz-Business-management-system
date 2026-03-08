@@ -16,7 +16,8 @@ const GROUPS = [
       { id: 'stock_movement',   label: 'Stock Movement'           },
       { id: 'grn_list',         label: 'GRN List'                 },
       { id: 'raw_material_grn', label: 'Raw Material GRN'         },
-      { id: 'supplier_goods',   label: 'Supplier Wise Received'   },
+      { id: 'supplier_goods',       label: 'Supplier Wise Received'      },
+      { id: 'item_wise_received',    label: 'Item Wise Received Goods'    },
     ]
   },
   {
@@ -194,6 +195,53 @@ export default function ReportsPage() {
             };
           })
         );
+      }
+
+      else if (activeReport === 'item_wise_received') {
+        // Product-wise GRN totals for date range
+        const { data: grns } = await supabase.from('grn_master')
+          .select('id, grn_date, grn_no, suppliers(name)')
+          .eq('company_id', cid)
+          .gte('grn_date', dateStart)
+          .lte('grn_date', dateEnd);
+        const grnIds = (grns || []).map((g: any) => g.id);
+        if (grnIds.length === 0) { rows = []; }
+        else {
+          const { data: items } = await supabase.from('grn_items')
+            .select('grn_id, quantity, unit_price, inventory:product_id(name, bottles_per_case)')
+            .in('grn_id', grnIds);
+          // Map grn_id → grn info
+          const grnMap: Record<string, any> = {};
+          (grns || []).forEach((g: any) => { grnMap[g.id] = g; });
+          // Group by product
+          const productMap: Record<string, any> = {};
+          (items || []).forEach((item: any) => {
+            const name    = item.inventory?.name || 'Unknown';
+            const bpc     = item.inventory?.bottles_per_case || 12;
+            const qty     = item.quantity || 0;
+            const grn     = grnMap[item.grn_id] || {};
+            if (!productMap[name]) {
+              productMap[name] = { name, bpc, totalCS: 0, totalBT: 0, totalBtl: 0, totalValue: 0, grnCount: 0 };
+            }
+            productMap[name].totalBtl   += qty;
+            productMap[name].totalCS    += Math.floor(qty / bpc);
+            productMap[name].totalBT    += qty % bpc;
+            productMap[name].totalValue += Math.round((qty / bpc) * (item.unit_price || 0));
+            productMap[name].grnCount   += 1;
+          });
+          rows = Object.values(productMap)
+            .sort((a: any, b: any) => b.totalBtl - a.totalBtl)
+            .map((p: any, n: number) => ({
+              '#':             n + 1,
+              'Product':       p.name,
+              'BPC':           p.bpc,
+              'Total Cases':   p.totalCS,
+              'Total Bottles': p.totalBT,
+              'Total Btl':     p.totalBtl,
+              'GRN Entries':   p.grnCount,
+              'Total Value':   p.totalValue,
+            }));
+        }
       }
 
       // ── RETURNS ────────────────────────────────────────────────────────────
