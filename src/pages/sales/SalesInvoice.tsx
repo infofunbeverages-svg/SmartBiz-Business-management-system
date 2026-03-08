@@ -853,8 +853,72 @@ const SalesInvoice = () => {
           </div>
         </div>
 
-        {/* Items Table */}
-        <table className="w-full mb-6">
+        {/* Items - Mobile Cards */}
+        <div className="lg:hidden space-y-2 mb-4">
+          {items.map((item, i) => (
+            <div key={i} className={`rounded-2xl p-3 border ${item.is_free ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-100 shadow-sm'}`}>
+              {/* Row 1: Item + Delete */}
+              <div className="flex gap-2 mb-2">
+                <div className="flex-1">
+                  <ItemDropdown stock={stock} value={item.inventory_id}
+                    onChange={val => updateItem(i, 'inventory_id', val)}
+                    onEnter={() => casesRefs.current[i]?.focus()} />
+                </div>
+                <button onClick={() => setItems(items.filter((_, idx) => idx !== i))} className="p-2 text-red-400 bg-red-50 rounded-xl self-start">
+                  <Trash2 size={14}/>
+                </button>
+              </div>
+              {/* Row 2: CS | BT | Price | Disc | Free */}
+              <div className="grid grid-cols-5 gap-1.5">
+                <div>
+                  <p className="text-[7px] font-black text-slate-400 uppercase mb-1">CS</p>
+                  <input type="number" ref={el => { casesRefs.current[i] = el; }}
+                    className="w-full p-2 bg-blue-50 text-center font-black rounded-lg outline-none text-sm"
+                    value={item.cases} onChange={e => updateItem(i, 'cases', e.target.value)}
+                    onKeyDown={e => { if (e.key==='Enter') { e.preventDefault(); bottlesRefs.current[i]?.focus(); }}} />
+                </div>
+                <div>
+                  <p className="text-[7px] font-black text-slate-400 uppercase mb-1">BT</p>
+                  <input type="number" ref={el => { bottlesRefs.current[i] = el; }}
+                    className="w-full p-2 bg-gray-50 text-center font-bold rounded-lg outline-none text-sm"
+                    value={item.qty_bottles} onChange={e => updateItem(i, 'qty_bottles', e.target.value)}
+                    onKeyDown={e => { if (e.key==='Enter') { e.preventDefault(); priceRefs.current[i]?.focus(); }}} />
+                </div>
+                <div>
+                  <p className="text-[7px] font-black text-blue-400 uppercase mb-1">Price</p>
+                  <input type="number" step="0.01" ref={el => { priceRefs.current[i] = el; }}
+                    className={`w-full p-2 text-center font-black rounded-lg outline-none text-sm ${item.special_price > 0 && item.unit_price === item.special_price ? 'bg-orange-50 text-orange-700' : 'bg-blue-50 text-blue-800'}`}
+                    value={item.unit_price || ''} onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value)||0)}
+                    onKeyDown={e => { if (e.key==='Enter') { e.preventDefault(); discRefs.current[i]?.focus(); }}} placeholder="0" />
+                </div>
+                <div>
+                  <p className="text-[7px] font-black text-amber-500 uppercase mb-1">Disc%</p>
+                  <input type="number" step="0.01" ref={el => { discRefs.current[i] = el; }}
+                    className={`w-full p-2 text-center font-bold rounded-lg outline-none text-sm ${Number(item.item_discount_per||0) > 40 ? 'bg-red-50 text-red-700' : 'bg-amber-50'}`}
+                    value={item.item_discount_per || ''} onChange={e => updateItem(i, 'item_discount_per', parseFloat(e.target.value)||0)}
+                    onKeyDown={e => { if (e.key==='Enter') { e.preventDefault(); freeRefs.current[i]?.focus(); }}} />
+                </div>
+                <div>
+                  <p className="text-[7px] font-black text-emerald-500 uppercase mb-1">Free</p>
+                  <div className="flex items-center justify-center h-9">
+                    <input type="checkbox" ref={el => { freeRefs.current[i] = el; }}
+                      checked={!!item.is_free} onChange={e => updateItem(i, 'is_free', e.target.checked)}
+                      className="w-5 h-5 accent-emerald-600"
+                      onKeyDown={e => { if (e.key==='Enter') { e.preventDefault(); if (i===items.length-1){addNewRow();}else{document.querySelectorAll<HTMLElement>('.item-dropdown-input')[i+1]?.focus();} }}} />
+                  </div>
+                </div>
+              </div>
+              {/* Row 3: Total */}
+              <div className="flex justify-between items-center mt-1.5">
+                {item.special_price > 0 && item.unit_price === item.special_price && <span className="text-[8px] text-orange-500 font-black">🔥 SPECIAL</span>}
+                <span className="ml-auto font-black text-blue-600 text-sm">LKR {Number(item.total).toFixed(2)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Items - Desktop Table */}
+        <table className="hidden lg:table w-full mb-6">
           <thead>
             <tr className="bg-gray-900 text-white text-[10px] uppercase">
               <th className="p-3 text-left">Item</th>
@@ -872,76 +936,44 @@ const SalesInvoice = () => {
             {items.map((item, i) => (
               <tr key={i} className="border-b">
                 <td className="p-2 w-1/3">
-                  <ItemDropdown
-                    stock={stock}
-                    value={item.inventory_id}
+                  <ItemDropdown stock={stock} value={item.inventory_id}
                     onChange={val => updateItem(i, 'inventory_id', val)}
-                    onEnter={() => casesRefs.current[i]?.focus()}
-                  />
+                    onEnter={() => casesRefs.current[i]?.focus()} />
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    ref={el => { casesRefs.current[i] = el; }}
+                  <input type="number" ref={el => { casesRefs.current[i] = el; }}
                     className="w-full p-2 bg-blue-50 text-center font-bold rounded-lg outline-none border border-transparent focus:border-blue-400"
-                    value={item.cases}
-                    onChange={e => updateItem(i, 'cases', e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); bottlesRefs.current[i]?.focus(); } }}
-                  />
+                    value={item.cases} onChange={e => updateItem(i, 'cases', e.target.value)}
+                    onKeyDown={e => { if (e.key==='Enter') { e.preventDefault(); bottlesRefs.current[i]?.focus(); }}} />
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    ref={el => { bottlesRefs.current[i] = el; }}
+                  <input type="number" ref={el => { bottlesRefs.current[i] = el; }}
                     className="w-full p-2 bg-gray-50 text-center rounded-lg outline-none border border-transparent focus:border-blue-400"
-                    value={item.qty_bottles}
-                    onChange={e => updateItem(i, 'qty_bottles', e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); priceRefs.current[i]?.focus(); } }}
-                  />
+                    value={item.qty_bottles} onChange={e => updateItem(i, 'qty_bottles', e.target.value)}
+                    onKeyDown={e => { if (e.key==='Enter') { e.preventDefault(); priceRefs.current[i]?.focus(); }}} />
                 </td>
-                {/* MRP - read only */}
                 <td className="p-2 text-right text-xs text-gray-300 font-bold">
                   {item.mrp_price > 0 ? Number(item.mrp_price).toFixed(2) : ''}
                 </td>
-                {/* Price - editable */}
                 <td className="p-2">
-                  <input
-                    type="number" step="0.01" min="0"
-                    ref={el => { priceRefs.current[i] = el; }}
+                  <input type="number" step="0.01" min="0" ref={el => { priceRefs.current[i] = el; }}
                     className={`w-full p-2 text-right font-black rounded-lg outline-none border transition-colors ${item.special_price > 0 && item.unit_price === item.special_price ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-blue-50 border-blue-200 text-blue-800 focus:border-blue-500'}`}
-                    value={item.unit_price || ''}
-                    onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); discRefs.current[i]?.focus(); } }}
-                    placeholder="0.00"
-                  />
+                    value={item.unit_price || ''} onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value)||0)}
+                    onKeyDown={e => { if (e.key==='Enter') { e.preventDefault(); discRefs.current[i]?.focus(); }}} placeholder="0.00" />
                   {item.special_price > 0 && item.unit_price === item.special_price && (
                     <p className="text-[8px] text-orange-500 font-black text-right">🔥 SPECIAL</p>
                   )}
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number" step="0.01" min="0" max="100"
-                    ref={el => { discRefs.current[i] = el; }}
+                  <input type="number" step="0.01" min="0" max="100" ref={el => { discRefs.current[i] = el; }}
                     className={`w-full p-2 text-center font-bold rounded-lg border outline-none ${Number(item.item_discount_per||0) > 40 ? 'bg-red-50 border-red-300 text-red-700' : 'bg-amber-50 border-amber-200 focus:border-amber-400'}`}
-                    value={item.item_discount_per || ''}
-                    onChange={e => updateItem(i, 'item_discount_per', parseFloat(e.target.value) || 0)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); freeRefs.current[i]?.focus(); } }}
-                  />
+                    value={item.item_discount_per || ''} onChange={e => updateItem(i, 'item_discount_per', parseFloat(e.target.value)||0)}
+                    onKeyDown={e => { if (e.key==='Enter') { e.preventDefault(); freeRefs.current[i]?.focus(); }}} />
                 </td>
                 <td className="p-2 text-center">
-                  <input
-                    type="checkbox"
-                    ref={el => { freeRefs.current[i] = el; }}
-                    checked={!!item.is_free}
-                    onChange={e => updateItem(i, 'is_free', e.target.checked)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (i === items.length - 1) { addNewRow(); }
-                        else { document.querySelectorAll<HTMLElement>('.item-dropdown-input')[i+1]?.focus(); }
-                      }
-                    }}
-                  />
+                  <input type="checkbox" ref={el => { freeRefs.current[i] = el; }}
+                    checked={!!item.is_free} onChange={e => updateItem(i, 'is_free', e.target.checked)}
+                    onKeyDown={e => { if (e.key==='Enter') { e.preventDefault(); if (i===items.length-1){addNewRow();}else{document.querySelectorAll<HTMLElement>('.item-dropdown-input')[i+1]?.focus();} }}} />
                 </td>
                 <td className="p-2 text-right font-bold text-blue-600">{Number(item.total).toFixed(2)}</td>
                 <td className="p-2">

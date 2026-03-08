@@ -95,7 +95,42 @@ const PaymentManager = () => {
         <Clock className="text-blue-600" /> Recent Payments & Cheques
       </h3>
 
-      <div className="overflow-x-auto">
+      {/* Mobile cards */}
+      <div className="lg:hidden space-y-2">
+        {payments.map((p) => (
+          <div key={p.id} className="bg-white rounded-2xl px-4 py-3 border border-slate-100 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-slate-800 text-sm truncate">{p.customers?.full_name}</p>
+                <p className="text-[9px] text-slate-400 font-bold mt-0.5">{p.reference_no} · {p.payment_method}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-black text-blue-600 text-sm">LKR {p.amount.toLocaleString()}</p>
+                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
+                  p.status === 'Cleared' ? 'bg-green-100 text-green-700' : 
+                  p.status === 'Returned' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                }`}>{p.status}</span>
+              </div>
+            </div>
+            <div className="flex gap-1.5 mt-2">
+              {p.status === 'Pending' && p.payment_method === 'CHEQUE' && (
+                <button onClick={() => handleClear(p)} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-xl text-[10px] font-black active:scale-90">
+                  <CheckCircle size={12} /> OK
+                </button>
+              )}
+              {p.status !== 'Returned' && p.payment_method === 'CHEQUE' && (
+                <button onClick={() => openReturnModal(p)} className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-600 rounded-xl text-[10px] font-black active:scale-90">
+                  <XCircle size={12} /> Return
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {payments.length === 0 && <div className="text-center py-10 text-slate-400 font-bold text-sm">No payments found</div>}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest">

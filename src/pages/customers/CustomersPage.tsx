@@ -198,7 +198,7 @@ const CustomersPage = () => {
         {customers.map((c) => {
           const expiring = isExpiringSoon(c.bg_expiry_date);
           return (
-            <div key={c.id} className={`bg-white p-8 rounded-[3rem] shadow-xl border-4 transition-all relative overflow-hidden ${expiring ? 'border-yellow-400' : 'border-white'}`}>
+            <div key={c.id} className={`bg-white p-4 md:p-8 rounded-2xl md:rounded-[3rem] shadow-md md:shadow-xl border-2 md:border-4 transition-all relative overflow-hidden ${expiring ? 'border-yellow-400' : 'border-white'}`}>
               
               {/* Expiring Soon Tag */}
               {expiring && c.payment_type !== 'Cash' && (
@@ -219,7 +219,7 @@ const CustomersPage = () => {
                 setEditingId(c.id); setShowAddForm(true); 
               }} className="absolute top-20 right-6 p-2 bg-slate-50 rounded-full text-slate-300 hover:text-blue-600"> <Edit3 size={18} /> </button>
               
-              <h3 className={`text-2xl font-black text-slate-800 uppercase italic truncate mb-1 pr-12 tracking-tight ${expiring ? 'mt-6' : ''}`}>{c.full_name || c.name}</h3>
+              <h3 className={`text-lg md:text-2xl font-black text-slate-800 uppercase italic truncate mb-1 pr-12 tracking-tight ${expiring ? 'mt-6' : ''}`}>{c.full_name || c.name}</h3>
               
               <div className="flex items-center gap-1 mb-4 text-blue-600 font-black italic text-[11px] uppercase">
                 <Tent size={12}/> {c.sales_area || 'No Area Specified'}
@@ -245,7 +245,7 @@ const CustomersPage = () => {
                   )}
               </div>
 
-              <div className="flex justify-between items-center bg-slate-900 p-5 rounded-[2rem] text-white text-[10px] font-black mb-4 uppercase italic"> 
+              <div className="flex justify-between items-center bg-slate-900 p-3 md:p-5 rounded-xl md:rounded-[2rem] text-white text-[10px] font-black mb-3 md:mb-4 uppercase italic"> 
                   <div><p className="text-blue-400 text-[8px] uppercase not-italic tracking-widest">ASM</p>{c.regions?.profiles?.full_name || 'N/A'}</div> 
                   <div className="text-right"><p className="text-blue-400 text-[8px] uppercase not-italic tracking-widest">Region</p>{c.regions?.region_name || 'N/A'}</div> 
               </div>

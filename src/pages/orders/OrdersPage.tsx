@@ -160,25 +160,60 @@ const OrdersPage: React.FC = () => {
         />
       </div>
 
-      {/* Orders Table */}
-      <Card className="rounded-[2.5rem] border-none shadow-sm overflow-hidden bg-white">
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-20 text-center uppercase font-black text-slate-300 italic tracking-widest animate-pulse">
-              <RefreshCcw className="inline mr-2 animate-spin" size={20} />
-              Loading Invoices...
-            </div>
-          ) : (
-            <TableView 
-              data={invoices.filter(o => 
-                o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                String(o.invoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase())
-              )} 
-              columns={orderColumns} 
-            />
-          )}
-        </CardContent>
-      </Card>
+      {/* ── MOBILE: Card List ── */}
+      {loading ? (
+        <div className="p-12 text-center uppercase font-black text-slate-300 italic tracking-widest animate-pulse">
+          <RefreshCcw className="inline mr-2 animate-spin" size={20} /> Loading...
+        </div>
+      ) : (
+        <>
+          {/* Mobile cards */}
+          <div className="lg:hidden space-y-2">
+            {invoices.filter(o =>
+              o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              String(o.invoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase())
+            ).map((o: any, i: number) => (
+              <div key={i} className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-blue-600 text-sm">#{o.invoiceNo}</p>
+                    <p className="font-black text-slate-800 uppercase text-xs truncate">{o.customerName}</p>
+                    <p className="text-[9px] text-slate-400 font-bold">{formatDate(o.date)} · {o.customerPhone}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-slate-800 text-sm">{formatCurrency(o.total)}</p>
+                    <div className="flex gap-1.5 mt-1 justify-end">
+                      <button onClick={() => generatePDF(o)} className="p-1.5 bg-slate-100 text-slate-600 rounded-lg active:scale-90 transition-all"><Download size={13} /></button>
+                      <button onClick={() => navigate(`/sales/new-invoice?edit=${o.dbId}`, { state: { invoiceId: o.dbId } })} className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black active:scale-90 transition-all"><Edit size={11} /> Edit</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {invoices.filter(o =>
+              o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              String(o.invoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase())
+            ).length === 0 && (
+              <div className="text-center py-10 text-slate-400 font-bold text-sm">No invoices found</div>
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden lg:block">
+            <Card className="rounded-[2.5rem] border-none shadow-sm overflow-hidden bg-white">
+              <CardContent className="p-0">
+                <TableView 
+                  data={invoices.filter(o => 
+                    o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    String(o.invoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase())
+                  )} 
+                  columns={orderColumns} 
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 };

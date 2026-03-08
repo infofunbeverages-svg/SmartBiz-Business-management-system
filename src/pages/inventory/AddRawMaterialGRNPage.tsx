@@ -184,7 +184,7 @@ const AddRawMaterialGRNPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-6 rounded-3xl shadow-sm border mb-6">
+      <div className="grid grid-cols-1 gap-3 bg-white p-4 rounded-2xl shadow-sm border mb-4">
         <select
           className="w-full border p-3 rounded-xl font-bold"
           value={grnData.supplier_id}
@@ -212,14 +212,67 @@ const AddRawMaterialGRNPage = () => {
         />
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border overflow-hidden mb-10">
+      {/* Mobile cards */}
+      <div className="lg:hidden space-y-3 mb-4">
+        {items.map((item, index) => {
+          const mat = getMaterial(item.raw_material_id);
+          const unitLabel = mat ? UNIT_LABELS[mat.unit_type] || mat.unit_type : '-';
+          return (
+            <div key={index} className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100">
+              <div className="flex gap-2 mb-2">
+                <select className="flex-1 p-2.5 font-bold outline-none border border-slate-200 rounded-xl text-sm bg-slate-50"
+                  value={item.raw_material_id}
+                  onChange={(e) => { const n=[...items]; n[index]={...n[index],raw_material_id:e.target.value}; setItems(n); }}>
+                  <option value="">-- Select Material --</option>
+                  {materials.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name} ({UNIT_LABELS[m.unit_type]}){m.size && ` - ${m.size}`}</option>
+                  ))}
+                </select>
+                <button onClick={() => setItems(items.filter((_, i) => i !== index))} className="p-2 text-red-400 bg-red-50 rounded-xl">
+                  <Trash2 size={15}/>
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Unit</p>
+                  <div className="p-2 bg-slate-100 rounded-lg text-center font-bold text-sm text-slate-500">{unitLabel}</div>
+                </div>
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Qty</p>
+                  <input type="number" step="0.01" placeholder="0"
+                    className="w-full p-2 bg-gray-50 rounded-lg text-center font-bold text-sm border-0 outline-none"
+                    value={item.quantity || ''}
+                    onChange={(e) => { const n=[...items]; n[index].quantity=parseFloat(e.target.value)||0; setItems(n); }} />
+                </div>
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Price</p>
+                  <input type="number" step="0.01" placeholder="0"
+                    className="w-full p-2 bg-gray-50 rounded-lg text-center font-bold text-sm border-0 outline-none"
+                    value={item.unit_price === 0 ? '' : item.unit_price}
+                    onChange={(e) => { const n=[...items]; const v=e.target.value; n[index].unit_price=v===''?0:parseFloat(v)||0; setItems(n); }} />
+                </div>
+              </div>
+              <div className="mt-2 text-right text-xs font-black text-amber-600">
+                Subtotal: LKR {((item.quantity||0)*(item.unit_price||0)).toLocaleString()}
+              </div>
+            </div>
+          );
+        })}
+        <button onClick={() => setItems([...items, { raw_material_id: '', quantity: 0, unit_price: 0 }])}
+          className="w-full p-3 text-[10px] font-black text-amber-600 uppercase bg-white rounded-2xl border border-dashed border-amber-200">
+          + ADD NEW ITEM
+        </button>
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden lg:block bg-white rounded-3xl shadow-sm border overflow-hidden mb-10">
         <table className="w-full">
           <thead className="bg-gray-50 text-[10px] font-black uppercase text-gray-400">
             <tr>
               <th className="p-4 text-left">Raw Material</th>
               <th className="p-4">Unit</th>
               <th className="p-4">Qty</th>
-              <th className="p-4">Unit Price <span className="text-gray-400 font-normal">(Optional)</span></th>
+              <th className="p-4">Unit Price</th>
               <th className="p-4 text-right">Subtotal</th>
               <th className="p-4"></th>
             </tr>
@@ -231,82 +284,42 @@ const AddRawMaterialGRNPage = () => {
               return (
                 <tr key={index} className="border-t border-gray-50">
                   <td className="p-2">
-                    <select
-                      className="w-full p-2 font-bold outline-none border rounded-lg"
+                    <select className="w-full p-2 font-bold outline-none border rounded-lg"
                       value={item.raw_material_id}
-                      onChange={(e) => {
-                        const newItems = [...items];
-                        newItems[index] = { ...newItems[index], raw_material_id: e.target.value };
-                        setItems(newItems);
-                      }}
-                    >
+                      onChange={(e) => { const n=[...items]; n[index]={...n[index],raw_material_id:e.target.value}; setItems(n); }}>
                       <option value="">-- Select --</option>
                       {materials.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} ({UNIT_LABELS[m.unit_type]})
-                          {m.size && ` - ${m.size}`}
-                        </option>
+                        <option key={m.id} value={m.id}>{m.name} ({UNIT_LABELS[m.unit_type]}){m.size && ` - ${m.size}`}</option>
                       ))}
                     </select>
                   </td>
                   <td className="p-2 font-bold text-center">{unitLabel}</td>
                   <td className="p-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="w-24 p-2 bg-gray-50 rounded-lg text-center font-bold"
-                      placeholder="0"
+                    <input type="number" step="0.01" className="w-24 p-2 bg-gray-50 rounded-lg text-center font-bold" placeholder="0"
                       value={item.quantity || ''}
-                      onChange={(e) => {
-                        const n = [...items];
-                        n[index].quantity = parseFloat(e.target.value) || 0;
-                        setItems(n);
-                      }}
-                    />
+                      onChange={(e) => { const n=[...items]; n[index].quantity=parseFloat(e.target.value)||0; setItems(n); }} />
                   </td>
                   <td className="p-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="w-full p-2 bg-gray-50 rounded-lg text-right font-bold"
-                      placeholder="Optional (0)"
+                    <input type="number" step="0.01" className="w-full p-2 bg-gray-50 rounded-lg text-right font-bold" placeholder="Optional"
                       value={item.unit_price === 0 ? '' : item.unit_price}
-                      onChange={(e) => {
-                        const n = [...items];
-                        const v = e.target.value;
-                        n[index].unit_price = v === '' ? 0 : parseFloat(v) || 0;
-                        setItems(n);
-                      }}
-                    />
+                      onChange={(e) => { const n=[...items]; const v=e.target.value; n[index].unit_price=v===''?0:parseFloat(v)||0; setItems(n); }} />
                   </td>
-                  <td className="p-2 text-right font-black text-amber-600">
-                    {((item.quantity || 0) * (item.unit_price || 0)).toLocaleString()}
-                  </td>
+                  <td className="p-2 text-right font-black text-amber-600">{((item.quantity||0)*(item.unit_price||0)).toLocaleString()}</td>
                   <td className="p-2">
-                    <button
-                      onClick={() => setItems(items.filter((_, i) => i !== index))}
-                      className="text-gray-300 hover:text-red-500"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <button onClick={() => setItems(items.filter((_, i) => i !== index))} className="text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        <button
-          onClick={() =>
-            setItems([...items, { raw_material_id: '', quantity: 0, unit_price: 0 }])
-          }
-          className="w-full p-3 text-[10px] font-black text-amber-600 uppercase"
-        >
+        <button onClick={() => setItems([...items, { raw_material_id: '', quantity: 0, unit_price: 0 }])}
+          className="w-full p-3 text-[10px] font-black text-amber-600 uppercase">
           + Add New Item
         </button>
       </div>
 
-      <div className="flex justify-between items-center bg-slate-900 p-6 rounded-3xl mb-10">
+      <div className="flex justify-between items-center bg-slate-900 p-4 rounded-2xl mb-4 sticky bottom-20 lg:bottom-4 z-10 shadow-2xl">
         <h2 className="text-white font-black">
           TOTAL: <span className="text-amber-400">LKR {calculateTotal().toLocaleString()}</span>
         </h2>
@@ -323,14 +336,27 @@ const AddRawMaterialGRNPage = () => {
         <h3 className="text-lg font-black uppercase mb-4 flex items-center gap-2 text-gray-700">
           Recent Raw Material GRNs
         </h3>
-        <div className="overflow-x-auto">
+        {/* Mobile */}
+        <div className="lg:hidden space-y-2">
+          {grnHistory.map((grn) => (
+            <div key={grn.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
+              <div>
+                <p className="font-mono font-black text-amber-600 text-xs">{grn.grn_no}</p>
+                <p className="font-bold text-slate-700 text-xs uppercase">{grn.suppliers?.name || 'N/A'}</p>
+                <p className="text-[9px] text-slate-400">{grn.grn_date}</p>
+              </div>
+              <p className="font-black text-slate-800 text-sm">LKR {grn.total_amount?.toLocaleString()}</p>
+            </div>
+          ))}
+          {grnHistory.length === 0 && <p className="text-center text-slate-400 text-sm py-4 font-bold">No records</p>}
+        </div>
+        {/* Desktop */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 text-gray-400 font-black uppercase text-[9px]">
               <tr>
-                <th className="p-3">Date</th>
-                <th className="p-3">GRN No</th>
-                <th className="p-3">Supplier</th>
-                <th className="p-3 text-right">Amount</th>
+                <th className="p-3">Date</th><th className="p-3">GRN No</th>
+                <th className="p-3">Supplier</th><th className="p-3 text-right">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -338,12 +364,8 @@ const AddRawMaterialGRNPage = () => {
                 <tr key={grn.id} className="hover:bg-gray-50">
                   <td className="p-3 font-bold">{grn.grn_date}</td>
                   <td className="p-3 font-mono text-amber-600 font-bold">{grn.grn_no}</td>
-                  <td className="p-3 font-bold uppercase">
-                    {grn.suppliers?.name || 'N/A'}
-                  </td>
-                  <td className="p-3 text-right font-black">
-                    LKR {grn.total_amount?.toLocaleString()}
-                  </td>
+                  <td className="p-3 font-bold uppercase">{grn.suppliers?.name || 'N/A'}</td>
+                  <td className="p-3 text-right font-black">LKR {grn.total_amount?.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

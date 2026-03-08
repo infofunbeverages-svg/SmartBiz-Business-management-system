@@ -195,7 +195,7 @@ const AddGRNPage = () => {
       </div>
 
       {/* Header */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-6 rounded-3xl shadow-sm border mb-6">
+      <div className="grid grid-cols-1 gap-3 bg-white p-4 rounded-2xl shadow-sm border mb-4">
         <select
           className="w-full border p-3 rounded-xl font-bold"
           value={grnData.supplier_id}
@@ -218,8 +218,79 @@ const AddGRNPage = () => {
         />
       </div>
 
-      {/* Items */}
-      <div className="bg-white rounded-3xl shadow-sm border overflow-hidden mb-10">
+      {/* Items - Mobile Cards */}
+      <div className="space-y-3 mb-4 lg:hidden">
+        {items.map((item, index) => (
+          <div key={index} className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100">
+            {/* Product selector */}
+            <div className="flex gap-2 mb-2">
+              <div className="flex-1">
+                <input
+                  list={`product-list-m-${index}`}
+                  placeholder="Type product name..."
+                  className="w-full p-2.5 font-bold outline-none border border-slate-200 rounded-xl text-sm bg-slate-50"
+                  value={products.find(p => p.id === item.product_id)?.name || ''}
+                  onChange={e => {
+                    const p = products.find(x => x.name === e.target.value);
+                    if (p) {
+                      const newItems = [...items];
+                      newItems[index] = { ...newItems[index], product_id: p.id, bpc: p.bottles_per_case || 12, unit_price: p.price || 0 };
+                      setItems(newItems);
+                    }
+                  }}
+                  onKeyDown={e => handleKeyDown(e, index, 'prod')}
+                />
+                <datalist id={`product-list-m-${index}`}>
+                  {products.map(p => <option key={p.id} value={p.name}>{p.name} (BPC: {p.bottles_per_case})</option>)}
+                </datalist>
+              </div>
+              <button onClick={() => setItems(items.filter((_, i) => i !== index))} className="p-2 text-red-400 bg-red-50 rounded-xl">
+                <Trash2 size={15}/>
+              </button>
+            </div>
+            {/* Numbers row */}
+            <div className="grid grid-cols-4 gap-2">
+              <div>
+                <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Cases</p>
+                <input type="number" className="w-full p-2 bg-gray-50 rounded-lg text-center font-bold text-sm border-0 outline-none"
+                  value={item.qty_cases}
+                  onChange={e => { const n = [...items]; n[index].qty_cases = parseInt(e.target.value) || 0; setItems(n); }}
+                  onKeyDown={e => handleKeyDown(e, index, 'cs')} />
+              </div>
+              <div>
+                <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Bottles</p>
+                <input type="number" className="w-full p-2 bg-blue-50 rounded-lg text-center font-bold text-sm border-0 outline-none"
+                  value={item.qty_bottles}
+                  onChange={e => { const n = [...items]; n[index].qty_bottles = parseInt(e.target.value) || 0; setItems(n); }}
+                  onKeyDown={e => handleKeyDown(e, index, 'bt')} />
+              </div>
+              <div>
+                <p className="text-[8px] font-black text-slate-400 uppercase mb-1">BPC</p>
+                <div className="w-full p-2 bg-slate-100 rounded-lg text-center font-bold text-sm text-slate-500">{item.bpc}</div>
+              </div>
+              <div>
+                <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Price</p>
+                <input type="number" className="w-full p-2 bg-gray-50 rounded-lg text-center font-bold text-sm border-0 outline-none"
+                  value={item.unit_price}
+                  onChange={e => { const n = [...items]; n[index].unit_price = parseFloat(e.target.value) || 0; setItems(n); }}
+                  onKeyDown={e => handleKeyDown(e, index, 'pr')} />
+              </div>
+            </div>
+            <div className="mt-2 text-right text-xs font-black text-blue-600">
+              Subtotal: LKR {(((item.qty_cases * item.bpc) + item.qty_bottles) / item.bpc * item.unit_price).toLocaleString()}
+            </div>
+          </div>
+        ))}
+        <button
+          onClick={() => setItems([...items, { product_id: '', qty_cases: 0, qty_bottles: 0, unit_price: 0, bpc: 12 }])}
+          className="w-full p-3 text-[10px] font-black text-blue-500 uppercase bg-white rounded-2xl border border-dashed border-blue-200"
+        >
+          + ADD NEW ITEM MANUALLY
+        </button>
+      </div>
+
+      {/* Items - Desktop Table */}
+      <div className="hidden lg:block bg-white rounded-3xl shadow-sm border overflow-hidden mb-10">
         <table className="w-full">
           <thead className="bg-gray-50 text-[10px] font-black uppercase text-gray-400">
             <tr>
@@ -256,32 +327,23 @@ const AddGRNPage = () => {
                   </datalist>
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    className="w-20 p-2 bg-gray-50 rounded-lg text-center font-bold"
+                  <input type="number" className="w-20 p-2 bg-gray-50 rounded-lg text-center font-bold"
                     value={item.qty_cases}
                     onChange={e => { const n = [...items]; n[index].qty_cases = parseInt(e.target.value) || 0; setItems(n); }}
-                    onKeyDown={e => handleKeyDown(e, index, 'cs')}
-                  />
+                    onKeyDown={e => handleKeyDown(e, index, 'cs')} />
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    className="w-20 p-2 bg-blue-50 rounded-lg text-center font-bold"
+                  <input type="number" className="w-20 p-2 bg-blue-50 rounded-lg text-center font-bold"
                     value={item.qty_bottles}
                     onChange={e => { const n = [...items]; n[index].qty_bottles = parseInt(e.target.value) || 0; setItems(n); }}
-                    onKeyDown={e => handleKeyDown(e, index, 'bt')}
-                  />
+                    onKeyDown={e => handleKeyDown(e, index, 'bt')} />
                 </td>
                 <td className="p-2 text-center font-bold text-gray-500 text-sm">{item.bpc}</td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    className="w-full p-2 bg-gray-50 rounded-lg text-right font-bold"
+                  <input type="number" className="w-full p-2 bg-gray-50 rounded-lg text-right font-bold"
                     value={item.unit_price}
                     onChange={e => { const n = [...items]; n[index].unit_price = parseFloat(e.target.value) || 0; setItems(n); }}
-                    onKeyDown={e => handleKeyDown(e, index, 'pr')}
-                  />
+                    onKeyDown={e => handleKeyDown(e, index, 'pr')} />
                 </td>
                 <td className="p-2 text-right font-black text-blue-600">
                   {(((item.qty_cases * item.bpc) + item.qty_bottles) / item.bpc * item.unit_price).toLocaleString()}
@@ -304,7 +366,7 @@ const AddGRNPage = () => {
       </div>
 
       {/* Save Bar */}
-      <div className="flex justify-between items-center bg-slate-900 p-6 rounded-3xl mb-10">
+      <div className="flex justify-between items-center bg-slate-900 p-4 rounded-2xl mb-4 sticky bottom-20 lg:bottom-4 z-10 shadow-2xl">
         <h2 className="text-white font-black">
           TOTAL: <span className="text-blue-400">LKR {calculateTotal().toLocaleString()}</span>
         </h2>
@@ -331,7 +393,28 @@ const AddGRNPage = () => {
           <input type="date" className="border p-2 rounded-xl text-sm font-bold" value={endDate} onChange={e => setEndDate(e.target.value)} />
           <button onClick={fetchGRNHistory} className="bg-gray-800 text-white rounded-xl font-bold text-xs uppercase">Apply Filters</button>
         </div>
-        <div className="overflow-x-auto">
+        {/* Mobile history cards */}
+        <div className="lg:hidden space-y-2">
+          {grnHistory.map(grn => (
+            <div key={grn.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
+              <div>
+                <p className="font-mono font-black text-blue-600 text-xs">{grn.grn_no}</p>
+                <p className="font-bold text-slate-700 text-xs uppercase">{grn.suppliers?.name || 'N/A'}</p>
+                <p className="text-[9px] text-slate-400">{grn.grn_date}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <p className="font-black text-slate-800 text-sm">LKR {grn.total_amount?.toLocaleString()}</p>
+                <button onClick={() => handleEdit(grn)} className="p-1.5 text-blue-600 bg-blue-50 rounded-lg active:scale-90">
+                  <Edit size={14}/>
+                </button>
+              </div>
+            </div>
+          ))}
+          {grnHistory.length === 0 && <p className="text-center text-slate-400 text-sm py-4 font-bold">No GRN records</p>}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 text-gray-400 font-black uppercase text-[9px]">
               <tr>
