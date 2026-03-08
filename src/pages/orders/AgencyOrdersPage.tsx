@@ -233,15 +233,31 @@ const AgencyOrdersPage = () => {
             {pendingDrafts.length === 0 ? (
               <div className="p-8 text-center text-gray-400 font-bold text-sm">No pending drafts</div>
             ) : (
-              <table className="w-full text-sm">
+              <>
+              {/* Mobile */}
+              <div className="lg:hidden divide-y">
+                {pendingDrafts.map(d => (
+                  <div key={d.id} className="p-3 flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-black text-amber-600 text-xs">📝 {d.draft_no}</p>
+                      <p className="font-black text-slate-800 text-sm uppercase truncate">{d.customers?.full_name}</p>
+                      <p className="text-[9px] text-gray-400">{d.draft_date} · {d.vehicle_no || '—'} {d.driver_name}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="font-black text-xs">LKR {Number(d.total_amount).toLocaleString()}</span>
+                      <button onClick={() => handlePrintDraft(d)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Printer size={13}/></button>
+                      <button onClick={() => deleteDraft(d.id)} className="p-1.5 bg-red-50 text-red-400 rounded-lg"><XCircle size={13}/></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop */}
+              <table className="hidden lg:table w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-gray-400 text-[10px] uppercase border-b">
-                    <th className="p-3 text-left">Draft No</th>
-                    <th className="p-3 text-left">Customer</th>
-                    <th className="p-3 text-left">Date</th>
-                    <th className="p-3 text-left">Vehicle / Driver</th>
-                    <th className="p-3 text-right">Amount</th>
-                    <th className="p-3 text-center">Actions</th>
+                    <th className="p-3 text-left">Draft No</th><th className="p-3 text-left">Customer</th>
+                    <th className="p-3 text-left">Date</th><th className="p-3 text-left">Vehicle / Driver</th>
+                    <th className="p-3 text-right">Amount</th><th className="p-3 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -250,31 +266,17 @@ const AgencyOrdersPage = () => {
                       <td className="p-3 font-black text-amber-600">📝 {d.draft_no}</td>
                       <td className="p-3 font-bold uppercase">{d.customers?.full_name}</td>
                       <td className="p-3 text-gray-500 font-bold">{d.draft_date}</td>
-                      <td className="p-3">
-                        <div className="text-xs font-bold">{d.vehicle_no || '—'}</div>
-                        <div className="text-[10px] text-gray-400">{d.driver_name || ''}</div>
-                      </td>
-                      <td className="p-3 text-right font-black">LKR {Number(d.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2 justify-center">
-                          <button
-                            onClick={() => handlePrintDraft(d)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 rounded-lg font-bold text-[10px] uppercase transition-all"
-                          >
-                            <Printer size={12} /> Print
-                          </button>
-                          <button
-                            onClick={() => deleteDraft(d.id)}
-                            className="p-1.5 text-gray-300 hover:text-red-500 rounded-lg"
-                          >
-                            <XCircle size={16} />
-                          </button>
-                        </div>
-                      </td>
+                      <td className="p-3"><div className="text-xs font-bold">{d.vehicle_no || '—'}</div><div className="text-[10px] text-gray-400">{d.driver_name || ''}</div></td>
+                      <td className="p-3 text-right font-black">LKR {Number(d.total_amount).toLocaleString('en-US',{minimumFractionDigits:2})}</td>
+                      <td className="p-3"><div className="flex items-center gap-2 justify-center">
+                        <button onClick={() => handlePrintDraft(d)} className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 rounded-lg font-bold text-[10px] uppercase transition-all"><Printer size={12}/> Print</button>
+                        <button onClick={() => deleteDraft(d.id)} className="p-1.5 text-gray-300 hover:text-red-500 rounded-lg"><XCircle size={16}/></button>
+                      </div></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </>
             )}
           </div>
 
@@ -286,14 +288,28 @@ const AgencyOrdersPage = () => {
                 <span className="font-black text-sm uppercase text-green-600">Converted to Invoice</span>
                 <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full">{convertedDrafts.length}</span>
               </div>
-              <table className="w-full text-sm">
+              {/* Mobile */}
+              <div className="lg:hidden divide-y">
+                {convertedDrafts.map(d => (
+                  <div key={d.id} className="p-3 flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-green-600 line-through text-xs">📝 {d.draft_no}</p>
+                      <p className="font-bold text-gray-400 uppercase text-sm truncate">{d.customers?.full_name}</p>
+                      <p className="text-[9px] text-gray-400">{d.draft_date}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-400 text-xs font-bold">LKR {Number(d.total_amount).toLocaleString()}</span>
+                      <button onClick={() => handlePrintDraft(d)} className="p-1.5 bg-gray-100 rounded-lg"><Printer size={13}/></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop */}
+              <table className="hidden lg:table w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-gray-400 text-[10px] uppercase border-b">
-                    <th className="p-3 text-left">Draft No</th>
-                    <th className="p-3 text-left">Customer</th>
-                    <th className="p-3 text-left">Date</th>
-                    <th className="p-3 text-right">Amount</th>
-                    <th className="p-3 text-center">Print</th>
+                    <th className="p-3 text-left">Draft No</th><th className="p-3 text-left">Customer</th>
+                    <th className="p-3 text-left">Date</th><th className="p-3 text-right">Amount</th><th className="p-3 text-center">Print</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -303,11 +319,7 @@ const AgencyOrdersPage = () => {
                       <td className="p-3 font-bold uppercase text-gray-400">{d.customers?.full_name}</td>
                       <td className="p-3 text-gray-400">{d.draft_date}</td>
                       <td className="p-3 text-right text-gray-400">LKR {Number(d.total_amount).toLocaleString()}</td>
-                      <td className="p-3 text-center">
-                        <button onClick={() => handlePrintDraft(d)} className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg font-bold text-[10px]">
-                          <Printer size={12} />
-                        </button>
-                      </td>
+                      <td className="p-3 text-center"><button onClick={() => handlePrintDraft(d)} className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg font-bold text-[10px]"><Printer size={12}/></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -323,14 +335,29 @@ const AgencyOrdersPage = () => {
           {orders.length === 0 ? (
             <div className="p-8 text-center text-gray-400 font-bold">No agency orders pending.</div>
           ) : (
-            <table className="w-full text-sm">
+            <>
+            {/* Mobile */}
+            <div className="lg:hidden divide-y">
+              {orders.map(o => (
+                <div key={o.id} className="p-3 flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black text-orange-600 text-xs">#{o.order_no || o.id.slice(0,6)}</p>
+                    <p className="font-black text-slate-800 uppercase text-sm truncate">{o.customers?.name}</p>
+                    <p className="text-[9px] text-gray-400">{o.order_date}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-black text-xs">LKR {Number(o.net_amount).toLocaleString()}</span>
+                    <button onClick={() => approveOrder(o.id)} className="px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-black">✅</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop */}
+            <table className="hidden lg:table w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-400 text-[10px] uppercase border-b">
-                  <th className="p-3 text-left">Order ID</th>
-                  <th className="p-3 text-left">Distributor</th>
-                  <th className="p-3 text-left">Date</th>
-                  <th className="p-3 text-right">Amount</th>
-                  <th className="p-3 text-center">Action</th>
+                  <th className="p-3 text-left">Order ID</th><th className="p-3 text-left">Distributor</th>
+                  <th className="p-3 text-left">Date</th><th className="p-3 text-right">Amount</th><th className="p-3 text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -340,18 +367,15 @@ const AgencyOrdersPage = () => {
                     <td className="p-3 font-black uppercase text-xs">{o.customers?.name}</td>
                     <td className="p-3 text-gray-500">{o.order_date}</td>
                     <td className="p-3 text-right font-bold">LKR {Number(o.net_amount).toLocaleString()}</td>
-                    <td className="p-3 text-center">
-                      <div className="flex gap-2 justify-center">
-                        <button onClick={() => approveOrder(o.id)} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black hover:bg-green-700 uppercase">
-                          ✅ Approve
-                        </button>
-                        <button className="text-gray-300 hover:text-red-500"><XCircle size={18}/></button>
-                      </div>
-                    </td>
+                    <td className="p-3 text-center"><div className="flex gap-2 justify-center">
+                      <button onClick={() => approveOrder(o.id)} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black hover:bg-green-700 uppercase">✅ Approve</button>
+                      <button className="text-gray-300 hover:text-red-500"><XCircle size={18}/></button>
+                    </div></td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </>
           )}
         </div>
       )}

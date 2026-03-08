@@ -195,16 +195,16 @@ const PaymentRouterPage = () => {
   };
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen font-sans">
+    <div className="p-3 lg:p-6 bg-slate-50 min-h-screen font-sans pb-24 lg:pb-6">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-black uppercase text-slate-800 flex items-center gap-3 mb-8 italic">
           <ArrowRightLeft className="text-blue-600" size={32} />
           Payment <span className="text-blue-600">Router</span>
         </h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-white">
+            <div className="bg-white p-4 rounded-2xl lg:rounded-[2.5rem] shadow-xl border border-white">
               <label className="text-[10px] font-black uppercase text-slate-400 mb-4 block">1. Source & Method</label>
               
               <select 
@@ -277,14 +277,14 @@ const PaymentRouterPage = () => {
               )}
             </div>
 
-            <div className="bg-blue-600 p-8 rounded-[2.5rem] shadow-xl text-white">
+            <div className="bg-blue-600 p-4 lg:p-8 rounded-2xl lg:rounded-[2.5rem] shadow-xl text-white">
               <label className="text-[10px] font-black uppercase mb-2 block">Amount Received</label>
-              <input ref={amountRef} type="number" className="w-full bg-transparent border-none text-4xl font-black outline-none placeholder:text-blue-300" placeholder="0.00" value={totalAmount || ''} onChange={(e) => setTotalAmount(parseFloat(e.target.value) || 0)} />
+              <input ref={amountRef} type="number" className="w-full bg-transparent border-none text-3xl lg:text-4xl font-black outline-none placeholder:text-blue-300" placeholder="0.00" value={totalAmount || ''} onChange={(e) => setTotalAmount(parseFloat(e.target.value) || 0)} />
             </div>
           </div>
 
-          <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-xl">
-            <h3 className="text-sm font-black uppercase mb-8 italic flex items-center gap-2">
+          <div className="lg:col-span-2 bg-white p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] shadow-xl">
+            <h3 className="text-sm font-black uppercase mb-4 italic flex items-center gap-2">
               <div className="w-1.5 h-5 bg-blue-600 rounded-full"></div> Expense Distribution
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -300,10 +300,10 @@ const PaymentRouterPage = () => {
               ))}
             </div>
 
-            <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white flex justify-between items-center mt-8 shadow-2xl">
+            <div className="bg-slate-900 rounded-2xl p-4 text-white flex flex-wrap justify-between items-center mt-4 gap-3 shadow-2xl">
               <div>
                 <p className="text-[10px] font-black uppercase text-slate-400">Net Cash to Office</p>
-                <h4 className="text-4xl font-black italic text-green-400">LKR {(totalAmount - splits.reduce((a, b) => a + b.amount, 0)).toLocaleString()}</h4>
+                <h4 className="text-2xl lg:text-4xl font-black italic text-green-400">LKR {(totalAmount - splits.reduce((a, b) => a + b.amount, 0)).toLocaleString()}</h4>
               </div>
               <div className="flex gap-2">
                 {editingPaymentId && (
@@ -319,44 +319,56 @@ const PaymentRouterPage = () => {
           </div>
         </div>
 
-        <div className="mt-10 bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+        <div className="mt-4 bg-white p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] shadow-xl border border-slate-100">
           <h3 className="text-lg font-black uppercase mb-6 text-slate-800 italic flex items-center gap-2">
             Recent Payments <span className="text-[10px] font-normal text-slate-400">(Edit කරන්න ඕනෙ payment එක Edit බොත්තම් එක ක්ලික් කරන්න)</span>
           </h3>
-          <div className="overflow-x-auto">
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-2">
+            {recentPayments.map((p) => (
+              <div key={p.id} className={`rounded-2xl px-3 py-2.5 border ${editingPaymentId===p.id?'bg-blue-50 border-blue-200':'bg-slate-50 border-slate-100'}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black text-slate-800 text-sm truncate">{p.customers?.full_name || '-'}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                      <span className="px-1.5 py-0.5 bg-slate-200 rounded text-[9px] font-black">{p.payment_method || '-'}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${p.status==='Cleared'?'bg-green-100 text-green-700':p.status==='Returned'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}`}>{p.status}</span>
+                      <span className="text-[9px] text-slate-400">{(p.cheque_date||p.created_at||'').toString().slice(0,10)}</span>
+                    </div>
+                    <p className="font-mono text-[9px] text-slate-400">{p.reference_no||'-'}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-black text-blue-600 text-sm">LKR {Number(p.amount||0).toLocaleString()}</p>
+                    <button onClick={() => loadPaymentForEdit(p)}
+                      className="mt-1 inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2.5 py-1.5 rounded-lg text-[10px] font-black">
+                      <Pencil size={12}/> Edit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Desktop Table */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
                 <tr>
-                  <th className="p-4 rounded-tl-xl">Customer</th>
-                  <th className="p-4">Date</th>
-                  <th className="p-4">Method</th>
-                  <th className="p-4">Reference</th>
-                  <th className="p-4 text-right">Amount</th>
-                  <th className="p-4 text-center">Status</th>
+                  <th className="p-4 rounded-tl-xl">Customer</th><th className="p-4">Date</th>
+                  <th className="p-4">Method</th><th className="p-4">Reference</th>
+                  <th className="p-4 text-right">Amount</th><th className="p-4 text-center">Status</th>
                   <th className="p-4 rounded-tr-xl text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {recentPayments.map((p) => (
-                  <tr key={p.id} className={`hover:bg-slate-50 ${editingPaymentId === p.id ? 'bg-blue-50' : ''}`}>
-                    <td className="p-4 font-bold text-slate-700">{p.customers?.full_name || '-'}</td>
-                    <td className="p-4 text-slate-600">{(p.cheque_date || p.created_at || '').toString().slice(0, 10)}</td>
-                    <td className="p-4"><span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-black">{p.payment_method || '-'}</span></td>
-                    <td className="p-4 font-mono text-xs">{p.reference_no || '-'}</td>
-                    <td className="p-4 text-right font-black text-blue-600">LKR {Number(p.amount || 0).toLocaleString()}</td>
-                    <td className="p-4 text-center">
-                      <span className={`px-2 py-1 rounded text-[9px] font-black ${
-                        p.status === 'Cleared' ? 'bg-green-100 text-green-700' : p.status === 'Returned' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                      }`}>{p.status}</span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <button
-                        onClick={() => loadPaymentForEdit(p)}
-                        className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-[10px] font-black hover:bg-blue-200"
-                      >
-                        <Pencil size={14} /> Edit
-                      </button>
-                    </td>
+                  <tr key={p.id} className={`hover:bg-slate-50 ${editingPaymentId===p.id?'bg-blue-50':''}`}>
+                    <td className="p-4 font-bold text-slate-700">{p.customers?.full_name||'-'}</td>
+                    <td className="p-4 text-slate-600">{(p.cheque_date||p.created_at||'').toString().slice(0,10)}</td>
+                    <td className="p-4"><span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-black">{p.payment_method||'-'}</span></td>
+                    <td className="p-4 font-mono text-xs">{p.reference_no||'-'}</td>
+                    <td className="p-4 text-right font-black text-blue-600">LKR {Number(p.amount||0).toLocaleString()}</td>
+                    <td className="p-4 text-center"><span className={`px-2 py-1 rounded text-[9px] font-black ${p.status==='Cleared'?'bg-green-100 text-green-700':p.status==='Returned'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}`}>{p.status}</span></td>
+                    <td className="p-4 text-center"><button onClick={() => loadPaymentForEdit(p)} className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-[10px] font-black hover:bg-blue-200"><Pencil size={14}/> Edit</button></td>
                   </tr>
                 ))}
               </tbody>

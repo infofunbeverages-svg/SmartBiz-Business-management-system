@@ -44,9 +44,9 @@ const PurchaseOrder = () => {
   const grandTotal = items.reduce((acc, item) => acc + item.total, 0);
 
   return (
-    <div className="min-h-screen bg-slate-100 p-8 print:bg-white print:p-0">
+    <div className="min-h-screen bg-slate-100 p-2 lg:p-8 print:bg-white print:p-0">
       {/* UI Controls - Only Visible on Screen */}
-      <div className="max-w-4xl mx-auto mb-6 flex justify-between print:hidden">
+      <div className="max-w-4xl mx-auto mb-3 flex gap-2 flex-wrap print:hidden">
         <button onClick={() => setItems([...items, { inventory_id: '', name: '', qty: 0, unit_type: 'Units', unit_price: 0, total: 0 }])} className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase shadow-lg flex items-center gap-2 hover:bg-black transition-all">
           <Plus size={18}/> Add Item
         </button>
@@ -56,7 +56,7 @@ const PurchaseOrder = () => {
       </div>
 
       {/* A4 Document Container */}
-      <div className="max-w-4xl mx-auto bg-white shadow-2xl print:shadow-none min-h-[297mm] p-16 flex flex-col relative overflow-hidden font-sans">
+      <div className="max-w-4xl mx-auto bg-white shadow-2xl print:shadow-none min-h-[297mm] p-4 lg:p-16 flex flex-col relative overflow-hidden font-sans overflow-x-auto">
         
         {/* Top Accent Bar */}
         <div className="absolute top-0 left-0 w-full h-2 bg-[#79B433]"></div>
@@ -86,8 +86,8 @@ const PurchaseOrder = () => {
         </div>
 
         {/* Vendor & Amount Summary */}
-        <div className="grid grid-cols-2 gap-12 mb-12">
-          <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-12 mb-6 lg:mb-12">
+          <div className="bg-slate-50 p-4 lg:p-8 rounded-2xl lg:rounded-3xl border border-slate-100">
             <p className="text-[10px] font-black text-[#79B433] uppercase tracking-widest mb-3 underline underline-offset-4 italic">Official Supplier:</p>
             <div className="print:hidden mb-4">
               <select className="w-full p-2 border-2 border-slate-200 rounded-lg font-bold text-sm outline-none focus:border-[#79B433]" onChange={(e) => setSelectedSupplier(suppliers.find(s => s.id === e.target.value))}>
@@ -99,15 +99,50 @@ const PurchaseOrder = () => {
             <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed uppercase">{selectedSupplier?.address || 'Vendor address is required for official orders'}</p>
           </div>
           
-          <div className="flex flex-col justify-center items-end border-r-8 border-[#79B433] pr-6 bg-slate-900 text-white p-6 rounded-l-3xl shadow-lg">
+          <div className="flex flex-col justify-center items-end border-r-8 border-[#79B433] pr-4 bg-slate-900 text-white p-4 rounded-2xl shadow-lg">
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Payable Amount</p>
-            <p className="text-4xl font-black tracking-tighter uppercase font-mono">LKR {grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+            <p className="text-2xl lg:text-4xl font-black tracking-tighter uppercase font-mono">LKR {grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
           </div>
         </div>
 
         {/* Table Section */}
         <div className="flex-grow overflow-hidden">
-          <table className="w-full">
+
+          {/* Mobile cards */}
+          <div className="lg:hidden space-y-2 mb-4 print:hidden">
+            {items.map((item, index) => (
+              <div key={index} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <select className="w-full bg-white rounded-lg p-2.5 outline-none font-black text-sm border border-slate-200 mb-2"
+                  value={item.inventory_id} onChange={(e) => handleItemChange(index, 'inventory_id', e.target.value)}>
+                  <option>Select Product / Item...</option>
+                  {stock.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[7px] font-black text-slate-400 uppercase mb-1">Qty</p>
+                    <input type="number" className="w-full text-center bg-white rounded-lg p-2 font-black text-sm border border-slate-200 outline-none"
+                      value={item.qty} onChange={(e) => handleItemChange(index, 'qty', e.target.value)} />
+                  </div>
+                  <div>
+                    <p className="text-[7px] font-black text-slate-400 uppercase mb-1">Unit</p>
+                    <select className="w-full bg-white rounded-lg p-2 outline-none font-bold text-xs border border-slate-200"
+                      value={item.unit_type} onChange={(e) => handleItemChange(index, 'unit_type', e.target.value)}>
+                      <option>Units</option><option>Cases</option><option>Ltr</option><option>Kg</option><option>Bot</option>
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-[7px] font-black text-slate-400 uppercase mb-1">Subtotal</p>
+                    <div className="w-full bg-white rounded-lg p-2 text-right font-black text-sm border border-slate-200">
+                      {item.total.toLocaleString(undefined,{minimumFractionDigits:2})}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <table className="hidden lg:table print:table w-full">
             <thead>
               <tr className="border-b-4 border-slate-900 text-[11px] font-black uppercase tracking-widest text-slate-900">
                 <th className="py-4 text-left pl-2">Description</th>
@@ -121,22 +156,25 @@ const PurchaseOrder = () => {
               {items.map((item, index) => (
                 <tr key={index} className="text-[13px] font-bold text-slate-800 hover:bg-slate-50 transition-colors">
                   <td className="py-5 pl-2">
-                    <select className="w-full bg-transparent outline-none uppercase print:appearance-none focus:text-[#79B433] font-black" value={item.inventory_id} onChange={(e) => handleItemChange(index, 'inventory_id', e.target.value)}>
+                    <select className="w-full bg-transparent outline-none uppercase print:appearance-none focus:text-[#79B433] font-black"
+                      value={item.inventory_id} onChange={(e) => handleItemChange(index, 'inventory_id', e.target.value)}>
                       <option>Select Product / Item...</option>
                       {stock.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </td>
                   <td className="py-5 text-center font-black">
-                    <input type="number" className="w-16 text-center bg-slate-100 rounded-md p-1 print:bg-transparent" value={item.qty} onChange={(e) => handleItemChange(index, 'qty', e.target.value)} />
+                    <input type="number" className="w-16 text-center bg-slate-100 rounded-md p-1 print:bg-transparent"
+                      value={item.qty} onChange={(e) => handleItemChange(index, 'qty', e.target.value)} />
                   </td>
                   <td className="py-5 text-center text-slate-400">
-                    <select className="bg-transparent outline-none print:appearance-none uppercase font-bold text-[11px]" value={item.unit_type} onChange={(e) => handleItemChange(index, 'unit_type', e.target.value)}>
+                    <select className="bg-transparent outline-none print:appearance-none uppercase font-bold text-[11px]"
+                      value={item.unit_type} onChange={(e) => handleItemChange(index, 'unit_type', e.target.value)}>
                       <option>Units</option><option>Cases</option><option>Ltr</option><option>Kg</option><option>Bot</option>
                     </select>
                   </td>
-                  <td className="py-5 text-right text-slate-500">{item.unit_price.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                  <td className="py-5 text-right text-slate-500">{item.unit_price.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
                   <td className="py-5 text-right pr-2 font-black text-slate-900 italic underline decoration-[#79B433] decoration-2 underline-offset-4">
-                    {item.total.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    {item.total.toLocaleString(undefined,{minimumFractionDigits:2})}
                   </td>
                 </tr>
               ))}

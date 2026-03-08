@@ -130,7 +130,7 @@ export default function PayrollPage() {
 
         {/* ── PROCESS TAB ── */}
         {tab==='process' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
             {/* Employee Select */}
             <div className="bg-white p-5 rounded-3xl shadow-sm border">
@@ -253,7 +253,29 @@ export default function PayrollPage() {
                 <p className="font-black uppercase text-sm">No payroll history</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              {/* Mobile Cards */}
+              <div className="lg:hidden divide-y">
+                {history.map((log,i)=>(
+                  <div key={log.id} className="p-3 flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-black text-slate-800 text-sm uppercase truncate">{log.employees?.name}</p>
+                      <p className="text-[9px] text-slate-400">{log.employees?.designation} · {log.month?.slice(0,7)}</p>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <span className="text-[9px] font-bold text-orange-500">Units: {log.units_count||0}</span>
+                        <span className="text-[9px] font-bold text-red-500">Ded: {(log.deductions||0).toLocaleString()}</span>
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${log.status==='PAID'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{log.status}</span>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-black text-green-700 text-sm">LKR {(log.net_salary||0).toLocaleString()}</p>
+                      <button onClick={()=>printSlip(log)} className="mt-1 p-1.5 bg-slate-100 rounded-lg active:scale-90 inline-block"><Printer size={13}/></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop Table */}
+              <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-900 text-white">
@@ -266,10 +288,7 @@ export default function PayrollPage() {
                     {history.map((log,i)=>(
                       <tr key={log.id} className={`border-b border-slate-50 hover:bg-green-50/30 transition ${i%2?'bg-slate-50/30':''}`}>
                         <td className="px-4 py-3 font-bold text-xs">{log.month?.slice(0,7)}</td>
-                        <td className="px-4 py-3">
-                          <p className="font-black text-xs uppercase">{log.employees?.name}</p>
-                          <p className="text-[10px] text-slate-400">{log.employees?.designation}</p>
-                        </td>
+                        <td className="px-4 py-3"><p className="font-black text-xs uppercase">{log.employees?.name}</p><p className="text-[10px] text-slate-400">{log.employees?.designation}</p></td>
                         <td className="px-4 py-3 font-bold text-xs">{(log.basic_salary||0).toLocaleString()}</td>
                         <td className="px-4 py-3 font-bold text-xs text-orange-600">{log.units_count||0}</td>
                         <td className="px-4 py-3 font-bold text-xs text-orange-600">{(log.piece_earned||0).toLocaleString()}</td>
@@ -277,22 +296,14 @@ export default function PayrollPage() {
                         <td className="px-4 py-3 font-bold text-xs text-red-500">{(log.deductions||0).toLocaleString()}</td>
                         <td className="px-4 py-3 font-bold text-xs text-yellow-600">{(log.advance_paid||0).toLocaleString()}</td>
                         <td className="px-4 py-3 font-black text-sm text-green-700">{(log.net_salary||0).toLocaleString()}</td>
-                        <td className="px-4 py-3">
-                          <span className={`text-[9px] font-black px-2 py-1 rounded-full
-                            ${log.status==='PAID'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>
-                            {log.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <button onClick={()=>printSlip(log)} className="p-1.5 bg-slate-100 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">
-                            <Printer size={13}/>
-                          </button>
-                        </td>
+                        <td className="px-4 py-3"><span className={`text-[9px] font-black px-2 py-1 rounded-full ${log.status==='PAID'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{log.status}</span></td>
+                        <td className="px-4 py-3"><button onClick={()=>printSlip(log)} className="p-1.5 bg-slate-100 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition"><Printer size={13}/></button></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         )}

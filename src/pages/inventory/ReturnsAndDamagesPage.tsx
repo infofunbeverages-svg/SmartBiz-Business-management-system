@@ -144,7 +144,7 @@ const ReturnsAndDamagesPage = () => {
   ];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto bg-slate-50 min-h-screen">
+    <div className="p-3 lg:p-6 max-w-5xl mx-auto bg-slate-50 min-h-screen pb-24 lg:pb-6">
       <div className="flex items-center gap-4 mb-8">
         <Link to="/inventory/reports" className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200">
           <ChevronLeft size={20} />
@@ -164,7 +164,7 @@ const ReturnsAndDamagesPage = () => {
         ))}
       </div>
 
-      <div className="bg-white rounded-[2.5rem] shadow-xl p-8 border border-white">
+      <div className="bg-white rounded-2xl lg:rounded-[2.5rem] shadow-xl p-4 lg:p-8 border border-white">
         {(mode === 'MARKET_RETURN' || mode === 'DAMAGE_RETURN' || mode === 'SAMPLE') && (
           <div className="mb-6">
             <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Customer</label>
@@ -215,26 +215,35 @@ const ReturnsAndDamagesPage = () => {
             <label className="text-[10px] font-black uppercase text-slate-500">Products</label>
             <button onClick={addItem} className="text-blue-600 text-[10px] font-black uppercase">+ Add Item</button>
           </div>
-          <div className="space-y-3">
-            <div className="grid grid-cols-12 gap-2 px-3 text-[9px] font-black uppercase text-slate-500">
-              <div className="col-span-4">Product</div>
-              <div className="col-span-2 text-center">Cases</div>
-              <div className="col-span-2 text-center">Bottles</div>
-              <div className="col-span-2 text-right">Price/Case <span className="text-blue-600 font-normal">(edit කරන්න පුළුවන්)</span></div>
-              <div className="col-span-2"></div>
-            </div>
+          <div className="space-y-2">
             {items.map((it, i) => (
-              <div key={i} className="grid grid-cols-12 gap-2 items-center p-3 bg-slate-50 rounded-xl">
-                <div className="col-span-4">
-                  <select className="w-full p-2 bg-white rounded-lg font-bold text-sm" value={it.inventory_id} onChange={e => updateItem(i, 'inventory_id', e.target.value)}>
-                    <option value="">Product</option>
+              <div key={i} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <div className="flex gap-2 mb-2">
+                  <select className="flex-1 p-2.5 bg-white rounded-xl font-bold text-sm border border-slate-200 outline-none"
+                    value={it.inventory_id} onChange={e => updateItem(i, 'inventory_id', e.target.value)}>
+                    <option value="">Select Product</option>
                     {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
+                  <button onClick={() => removeItem(i)} className="px-3 bg-red-50 text-red-500 rounded-xl font-black text-xs">✕</button>
                 </div>
-                <div className="col-span-2"><input type="number" placeholder="Cs" className="w-full p-2 bg-white rounded-lg text-center font-bold" value={it.cases || ''} onChange={e => updateItem(i, 'cases', parseInt(e.target.value) || 0)} /></div>
-                <div className="col-span-2"><input type="number" placeholder="Bt" className="w-full p-2 bg-white rounded-lg text-center font-bold" value={it.qty_bottles || ''} onChange={e => updateItem(i, 'qty_bottles', parseInt(e.target.value) || 0)} /></div>
-                <div className="col-span-2"><input type="number" placeholder="0" title="Customer to customer වෙනස් වෙනවා - edit කරන්න පුළුවන්" className="w-full p-2 bg-blue-50 border border-blue-200 rounded-lg text-right font-bold" value={it.unit_price || ''} onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)} /></div>
-                <div className="col-span-2 flex justify-end"><button onClick={() => removeItem(i)} className="text-red-500 text-xs font-black">Remove</button></div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Cases</p>
+                    <input type="number" placeholder="0" className="w-full p-2 bg-white rounded-lg text-center font-bold text-sm border border-slate-200 outline-none"
+                      value={it.cases || ''} onChange={e => updateItem(i, 'cases', parseInt(e.target.value)||0)} />
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Bottles</p>
+                    <input type="number" placeholder="0" className="w-full p-2 bg-white rounded-lg text-center font-bold text-sm border border-slate-200 outline-none"
+                      value={it.qty_bottles || ''} onChange={e => updateItem(i, 'qty_bottles', parseInt(e.target.value)||0)} />
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-black text-blue-500 uppercase mb-1">Price/Case</p>
+                    <input type="number" placeholder="0" title="edit කරන්න පුළුවන්"
+                      className="w-full p-2 bg-blue-50 border border-blue-200 rounded-lg text-right font-bold text-sm outline-none"
+                      value={it.unit_price || ''} onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value)||0)} />
+                  </div>
+                </div>
               </div>
             ))}
           </div>

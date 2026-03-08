@@ -83,17 +83,17 @@ export default function SalesDashboard() {
   );
 
   return (
-    <div className="bg-gray-50 min-h-screen p-6 space-y-5">
+    <div className="bg-gray-50 min-h-screen p-3 lg:p-6 space-y-3 lg:space-y-5 pb-24 lg:pb-6">
 
       {/* ── HEADER ── */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-2 lg:flex-row lg:justify-between lg:items-center">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-gray-900">
+          <h1 className="text-xl lg:text-3xl font-black tracking-tight text-gray-900">
             Sales <span className="text-indigo-600">Hub</span>
           </h1>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Live Intelligence Dashboard</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Range Tabs */}
           <div className="flex bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
             {(['today','week','month'] as const).map(r => (
@@ -137,7 +137,7 @@ export default function SalesDashboard() {
           { label:'Total Discount', value:`LKR ${Math.round(stats.discount).toLocaleString()}`, sub:'given away', Icon:Tag, accent:'amber' },
           { label:'Stock Alerts', value:String(lowStock.length), sub: lowStock.length ? 'items need restock' : 'All good!', Icon:Package, accent: lowStock.length?'red':'emerald' },
         ].map(({ label, value, sub, Icon, accent }) => (
-          <div key={label} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div key={label} className="bg-white rounded-2xl p-3 lg:p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 bg-${accent}-50`}>
               <Icon size={18} className={`text-${accent}-600`}/>
             </div>
@@ -149,10 +149,10 @@ export default function SalesDashboard() {
       </div>
 
       {/* ── CHARTS ROW ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
 
         {/* Area Chart */}
-        <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 p-3 lg:p-5">
           <div className="flex justify-between items-center mb-4">
             <div>
               <p className="text-sm font-black text-gray-800">Sales Trend</p>
@@ -187,7 +187,7 @@ export default function SalesDashboard() {
         </div>
 
         {/* Donut */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-3 lg:p-5">
           <div className="flex justify-between items-center mb-3">
             <div>
               <p className="text-sm font-black text-gray-800">Item-wise Sales</p>
@@ -242,10 +242,10 @@ export default function SalesDashboard() {
       </div>
 
       {/* ── BOTTOM ROW ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
 
         {/* Top Customers */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 lg:p-5">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm font-black text-gray-800">Top Customers</p>
             <Users size={15} className="text-cyan-500"/>
@@ -274,7 +274,7 @@ export default function SalesDashboard() {
         </div>
 
         {/* Recent Invoices */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 lg:p-5">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm font-black text-gray-800">Recent Invoices</p>
             <FileText size={15} className="text-emerald-500"/>
@@ -297,7 +297,7 @@ export default function SalesDashboard() {
         </div>
 
         {/* Low Stock */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 lg:p-5">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm font-black text-gray-800">
               {lowStock.length ? '⚠️ Low Stock' : '✅ Stock OK'}

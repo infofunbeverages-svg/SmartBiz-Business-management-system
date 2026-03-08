@@ -58,7 +58,7 @@ const ActivityLogPage = () => {
   );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto min-h-screen bg-gray-50/30">
+    <div className="p-3 lg:p-6 max-w-7xl mx-auto min-h-screen bg-gray-50/30 pb-24 lg:pb-6">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
@@ -90,8 +90,29 @@ const ActivityLogPage = () => {
       </div>
 
       {/* Logs Table */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-2xl lg:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+        {/* Mobile Cards */}
+        <div className="lg:hidden divide-y divide-slate-50">
+          {loading ? (
+            <div className="p-12 text-center font-black text-slate-300 uppercase animate-pulse italic">Loading...</div>
+          ) : filteredLogs.length === 0 ? (
+            <div className="p-12 text-center font-black text-slate-300 uppercase italic">No logs found</div>
+          ) : filteredLogs.map((log) => (
+            <div key={log.id} className="p-3 flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-black text-slate-800 text-sm uppercase truncate">{log.profiles?.full_name || 'System User'}</p>
+                <p className="text-[10px] font-bold text-slate-500 italic">{log.action}</p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border ${getModuleColor(log.module)}`}>{log.module}</span>
+                  <span className="text-[9px] text-slate-400">{new Date(log.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+              <button onClick={() => setSelectedLog(log)} className="p-1.5 text-slate-300 hover:text-blue-600 flex-shrink-0"><Info size={16}/></button>
+            </div>
+          ))}
+        </div>
+        {/* Desktop Table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-separate border-spacing-0">
             <thead>
               <tr className="bg-slate-50/50">
@@ -103,60 +124,32 @@ const ActivityLogPage = () => {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading ? (
-                <tr>
-                  <td colSpan={4} className="p-20 text-center font-black text-slate-300 uppercase animate-pulse italic">
-                    Retrieving Audit Data...
-                  </td>
-                </tr>
+                <tr><td colSpan={4} className="p-20 text-center font-black text-slate-300 uppercase animate-pulse italic">Retrieving Audit Data...</td></tr>
               ) : filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-20 text-center font-black text-slate-300 uppercase italic">
-                    No activity logs found for {company?.name}
-                  </td>
-                </tr>
+                <tr><td colSpan={4} className="p-20 text-center font-black text-slate-300 uppercase italic">No activity logs found for {company?.name}</td></tr>
               ) : (
                 filteredLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-blue-50/20 transition-colors group">
                     <td className="p-5">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center font-black group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
-                          <User size={18} />
+                          <User size={18}/>
                         </div>
                         <div>
-                          <p className="font-black text-sm text-slate-800 leading-tight uppercase">
-                            {log.profiles?.full_name || 'System User'}
-                          </p>
-                          <p className="text-[11px] font-bold text-slate-400 mt-1 italic leading-tight">
-                            {log.action}
-                          </p>
+                          <p className="font-black text-sm text-slate-800 leading-tight uppercase">{log.profiles?.full_name||'System User'}</p>
+                          <p className="text-[11px] font-bold text-slate-400 mt-1 italic leading-tight">{log.action}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-5">
-                      <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border flex items-center w-fit gap-1.5 ${getModuleColor(log.module)}`}>
-                        <Tag size={10} />
-                        {log.module}
-                      </span>
-                    </td>
+                    <td className="p-5"><span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border flex items-center w-fit gap-1.5 ${getModuleColor(log.module)}`}><Tag size={10}/>{log.module}</span></td>
                     <td className="p-5">
                       <div className="flex flex-col">
-                        <span className="text-[11px] font-black text-slate-700 flex items-center gap-1.5">
-                          <Calendar size={12} className="text-blue-500" />
-                          {new Date(log.created_at).toLocaleDateString()}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 mt-1">
-                          <Clock size={12} />
-                          {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
-                        </span>
+                        <span className="text-[11px] font-black text-slate-700 flex items-center gap-1.5"><Calendar size={12} className="text-blue-500"/>{new Date(log.created_at).toLocaleDateString()}</span>
+                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 mt-1"><Clock size={12}/>{formatDistanceToNow(new Date(log.created_at),{addSuffix:true})}</span>
                       </div>
                     </td>
                     <td className="p-5 text-right">
-                        <button 
-                          onClick={() => setSelectedLog(log)}
-                          className="p-2 text-slate-300 hover:text-blue-600 transition-colors"
-                        >
-                            <Info size={18} />
-                        </button>
+                        <button onClick={() => setSelectedLog(log)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors"><Info size={18}/></button>
                     </td>
                   </tr>
                 ))

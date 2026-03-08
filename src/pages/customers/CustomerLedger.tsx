@@ -135,9 +135,9 @@ const CustomerLedger = () => {
               </select>
             </div>
 
-            <div className="md:col-span-2">
+            <div className="lg:col-span-2">
               <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Date Range</label>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-center gap-2">
                 <input type="date" className="flex-1 bg-slate-50 border-none rounded-xl p-3 text-xs font-bold outline-none" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} />
                 <span className="text-slate-300 font-bold text-xs">TO</span>
                 <input type="date" className="flex-1 bg-slate-50 border-none rounded-xl p-3 text-xs font-bold outline-none" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} />
@@ -151,48 +151,54 @@ const CustomerLedger = () => {
       </Card>
 
       {/* Table Section */}
-      <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="text-center py-20 italic font-black uppercase text-slate-300 tracking-widest">Fetching Ledger...</div>
-          ) : (
-            <TableView 
-              data={data}
-              columns={[
-                { 
-                  header: 'Date', 
-                  cell: (r: any) => <span className="text-[10px] font-bold">{new Date(r.created_at).toLocaleDateString()}</span> 
-                },
-                { 
-                  header: 'Description', 
-                  cell: (r: any) => (
+      {loading ? (
+        <div className="text-center py-20 italic font-black uppercase text-slate-300 tracking-widest">Fetching Ledger...</div>
+      ) : (
+        <>
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-2">
+            {data.map((r: any, i: number) => (
+              <div key={i} className="bg-white rounded-2xl px-3 py-2.5 shadow-sm border border-slate-100 flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-black text-slate-800 text-xs uppercase truncate">{r.description}</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase">{r.customer?.full_name}</p>
+                  <p className="text-[9px] text-slate-400">{new Date(r.created_at).toLocaleDateString()}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  {r.type === 'DEBIT'
+                    ? <p className="font-black text-red-500 text-sm">DR LKR {r.amount.toLocaleString()}</p>
+                    : <p className="font-black text-emerald-600 text-sm">CR LKR {r.amount.toLocaleString()}</p>
+                  }
+                  <p className="text-[9px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg mt-0.5 inline-block">
+                    Bal: LKR {r.running_balance?.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {data.length === 0 && <div className="text-center py-10 text-slate-400 font-bold text-sm">No ledger entries found</div>}
+          </div>
+          {/* Desktop Table */}
+          <Card className="hidden lg:block border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
+            <CardContent className="p-0">
+              <TableView
+                data={data}
+                columns={[
+                  { header: 'Date', cell: (r: any) => <span className="text-[10px] font-bold">{new Date(r.created_at).toLocaleDateString()}</span> },
+                  { header: 'Description', cell: (r: any) => (
                     <div className="flex flex-col">
                       <span className="font-black text-slate-800 text-[11px] uppercase tracking-tight">{r.description}</span>
                       <span className="text-[9px] text-slate-400 font-bold uppercase">{r.customer?.full_name}</span>
                     </div>
-                  )
-                },
-                { 
-                  header: 'Debit', 
-                  cell: (r: any) => <span className="font-black text-red-500">{r.type === 'DEBIT' ? `LKR ${r.amount.toLocaleString()}` : '-'}</span> 
-                },
-                { 
-                  header: 'Credit', 
-                  cell: (r: any) => <span className="font-black text-emerald-600">{r.type === 'CREDIT' ? `LKR ${r.amount.toLocaleString()}` : '-'}</span> 
-                },
-                { 
-                  header: 'Balance', 
-                  cell: (r: any) => (
-                    <span className="font-black text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">
-                      LKR {r.running_balance?.toLocaleString()}
-                    </span>
-                  ) 
-                },
-              ]}
-            />
-          )}
-        </CardContent>
-      </Card>
+                  )},
+                  { header: 'Debit', cell: (r: any) => <span className="font-black text-red-500">{r.type === 'DEBIT' ? `LKR ${r.amount.toLocaleString()}` : '-'}</span> },
+                  { header: 'Credit', cell: (r: any) => <span className="font-black text-emerald-600">{r.type === 'CREDIT' ? `LKR ${r.amount.toLocaleString()}` : '-'}</span> },
+                  { header: 'Balance', cell: (r: any) => <span className="font-black text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">LKR {r.running_balance?.toLocaleString()}</span> },
+                ]}
+              />
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <style>{`
         @media print {

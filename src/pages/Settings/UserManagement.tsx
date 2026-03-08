@@ -144,7 +144,7 @@ const UserManagement = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto bg-slate-50 min-h-screen text-left">
+    <div className="p-3 lg:p-6 max-w-7xl mx-auto bg-slate-50 min-h-screen text-left pb-24 lg:pb-6">
       <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
         <div>
           <h1 className="text-3xl font-black italic uppercase text-slate-900 leading-none">Access <span className="text-blue-600">Control</span></h1>
@@ -155,7 +155,7 @@ const UserManagement = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-lg">
             <h2 className="text-xs font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
@@ -183,7 +183,7 @@ const UserManagement = () => {
           </div>
         </div>
 
-        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900 p-6 rounded-[2.5rem]">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-900 p-4 rounded-2xl">
           {renderSection('Inventory')}
           {renderSection('Sales')}
           {renderSection('Customers')}
@@ -193,18 +193,35 @@ const UserManagement = () => {
         </div>
       </div>
 
-      <div className="mt-8 bg-white border rounded-[2rem] overflow-hidden shadow-sm">
-        <table className="w-full border-collapse">
+      <div className="mt-4 bg-white border rounded-2xl overflow-hidden shadow-sm">
+        {/* Mobile Cards */}
+        <div className="lg:hidden divide-y">
+          {users.map((u) => (
+            <div key={u.id} className={`p-3 flex items-center justify-between gap-2 cursor-pointer ${selectedUserId===u.id?'bg-blue-50':''}`} onClick={() => handleSelectUser(u)}>
+              <div className="min-w-0 flex-1">
+                <p className="font-black text-slate-900 text-sm uppercase truncate">{u.full_name}</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase">{u.email}</p>
+                <p className="text-[9px] text-blue-500 font-black uppercase mt-0.5">{u.role}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {u.permissions?.admin_access||u.role==='super_admin' ? <Shield className="text-blue-500" size={16}/> : <Lock className="text-slate-200" size={16}/>}
+                <Trash2 className="text-slate-200 hover:text-red-500 cursor-pointer" size={16}/>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Desktop Table */}
+        <table className="hidden lg:table w-full border-collapse">
           <thead className="bg-slate-50 text-[9px] font-black uppercase text-slate-400 border-b">
             <tr><th className="p-6 text-left">Member</th><th className="p-6 text-left">Role</th><th className="p-6 text-center">Admin</th><th className="p-6 text-right">Action</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-50 text-xs text-left">
             {users.map((u) => (
-              <tr key={u.id} className={`hover:bg-blue-50 cursor-pointer ${selectedUserId === u.id ? 'bg-blue-50' : ''}`} onClick={() => handleSelectUser(u)}>
-                <td className="p-6 font-black text-slate-900 text-left">{u.full_name}<br/><span className="text-[10px] text-slate-400 font-bold uppercase">{u.email}</span></td>
-                <td className="p-6 uppercase font-black text-slate-600 text-left">{u.role}</td>
-                <td className="p-6 text-center">{u.permissions?.admin_access || u.role === 'super_admin' ? <Shield className="text-blue-500 mx-auto" /> : <Lock className="text-slate-200 mx-auto" />}</td>
-                <td className="p-6 text-right"><Trash2 className="text-slate-200 hover:text-red-500 inline cursor-pointer" size={18} /></td>
+              <tr key={u.id} className={`hover:bg-blue-50 cursor-pointer ${selectedUserId===u.id?'bg-blue-50':''}`} onClick={() => handleSelectUser(u)}>
+                <td className="p-6 font-black text-slate-900">{u.full_name}<br/><span className="text-[10px] text-slate-400 font-bold uppercase">{u.email}</span></td>
+                <td className="p-6 uppercase font-black text-slate-600">{u.role}</td>
+                <td className="p-6 text-center">{u.permissions?.admin_access||u.role==='super_admin'?<Shield className="text-blue-500 mx-auto"/>:<Lock className="text-slate-200 mx-auto"/>}</td>
+                <td className="p-6 text-right"><Trash2 className="text-slate-200 hover:text-red-500 inline cursor-pointer" size={18}/></td>
               </tr>
             ))}
           </tbody>

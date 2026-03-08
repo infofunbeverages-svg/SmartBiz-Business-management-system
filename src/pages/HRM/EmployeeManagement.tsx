@@ -110,7 +110,7 @@ export default function EmployeeManagement() {
           <span className="text-xs font-black text-gray-300 pr-2">{filtered.length}</span>
         </div>
 
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-4">
           {/* Grid */}
           <div className="flex-1">
             {loading ? (
@@ -121,7 +121,7 @@ export default function EmployeeManagement() {
                 <p className="font-black uppercase text-sm">No employees found</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {filtered.map(emp => (
                   <div key={emp.id} onClick={()=>setSelected(selected?.id===emp.id?null:emp)}
                     className={`bg-white rounded-3xl p-5 border-2 cursor-pointer transition-all hover:shadow-lg
@@ -165,8 +165,8 @@ export default function EmployeeManagement() {
 
           {/* Detail Panel */}
           {selected && (
-            <div className="w-68 flex-shrink-0" style={{width:'270px'}}>
-              <div className="bg-white rounded-3xl border-2 border-blue-100 p-5 sticky top-4">
+            <div className="lg:w-68 lg:flex-shrink-0 lg:w-[270px]">
+              <div className="bg-white rounded-2xl border-2 border-blue-100 p-4 lg:sticky lg:top-4">
                 <div className="flex justify-between items-start mb-4">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black text-white ${selected.status==='Active'?'bg-blue-600':'bg-slate-300'}`}>
                     {selected.name?.charAt(0)?.toUpperCase()}
