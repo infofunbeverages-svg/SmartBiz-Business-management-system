@@ -168,3 +168,51 @@
   table { page-break-inside: auto; }
   tr    { page-break-inside: avoid; }
 }
+/* ── REPORT PRINT FIX - Lines cut problem ─────────────────── */
+@media print {
+  /* Report table rows - never cut in middle */
+  .report-print-table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Report table header repeat on each page */
+  .report-print-table thead {
+    display: table-header-group !important;
+  }
+
+  /* Report table footer repeat */
+  .report-print-table tfoot {
+    display: table-footer-group !important;
+  }
+
+  /* Report page margins */
+  @page {
+    margin: 10mm 8mm !important;
+    size: A4 landscape;
+  }
+
+  /* Show hidden print elements */
+  .print\:block { display: block !important; }
+  .print\:hidden { display: none !important; }
+
+  /* Report container */
+  .report-print-container {
+    font-size: 9pt !important;
+    font-family: Arial, sans-serif !important;
+  }
+
+  /* Report table cells */
+  .report-print-table td,
+  .report-print-table th {
+    padding: 3px 5px !important;
+    font-size: 8pt !important;
+    border: 0.5pt solid #ccc !important;
+    white-space: nowrap;
+  }
+
+  /* Report print header */
+  .report-print-header {
+    margin-bottom: 8mm !important;
+  }
+}

@@ -31,9 +31,11 @@ const GROUPS = [
   {
     id: 'SALES', label: 'Sales', icon: ShoppingCart, color: 'green',
     reports: [
-      { id: 'invoice_list', label: 'Invoice List'      },
-      { id: 'sales_report', label: 'Sales Report'      },
-      { id: 'free_issue',   label: 'Free Issue Report' },
+      { id: 'invoice_list',      label: 'Invoice List'          },
+      { id: 'sales_report',      label: 'Sales Report'          },
+      { id: 'item_wise_sales',   label: 'Item Wise Sales Report'},
+      { id: 'free_issue',        label: 'Free Issue Report'     },
+      { id: 'discount_report',   label: 'Discount Report'       },
     ]
   },
   {
@@ -175,16 +177,22 @@ export default function ReportsPage() {
         const { data: d } = await q.order('grn_date', { ascending: false });
         let n = 0;
         rows = (d || []).flatMap(g =>
-          (g.grn_items || []).map((item: any) => ({
-            '#':          ++n,
-            'Date':       g.grn_date,
-            'GRN No':     g.grn_no,
-            'Supplier':   g.suppliers?.name || '-',
-            'Product':    item.inventory?.name || '-',
-            'Qty (Btl)':  item.quantity || 0,
-            'Unit Price': item.unit_price || 0,
-            'Subtotal':   item.total_price || Math.round(((item.quantity || 0) / 12) * (item.unit_price || 0)),
-          }))
+          (g.grn_items || []).map((item: any) => {
+            const bpc = item.inventory?.bottles_per_case || 12;
+            const qty = item.quantity || 0;
+            return {
+              '#':          ++n,
+              'Date':       g.grn_date,
+              'GRN No':     g.grn_no,
+              'Supplier':   g.suppliers?.name || '-',
+              'Product':    item.inventory?.name || '-',
+              'Cases':      Math.floor(qty / bpc),
+              'Bottles':    qty % bpc,
+              'Qty (Btl)':  qty,
+              'Unit Price': item.unit_price || 0,
+              'Subtotal':   item.total_price || Math.round((qty / bpc) * (item.unit_price || 0)),
+            };
+          })
         );
       }
 
@@ -211,35 +219,166 @@ export default function ReportsPage() {
       }
 
       // ── SALES ──────────────────────────────────────────────────────────────
-      else if (['invoice_list','sales_report'].includes(activeReport)) {
+      else if (activeReport === 'invoice_list') {
         const { data: d } = await supabase.from('invoices')
-          .select('created_at, invoice_no, vehicle_no, total_amount, customers(full_name, sales_area)')
-          .eq('company_id', cid).gte('created_at', ds).lte('created_at', de).order('created_at', { ascending: false });
+          .select('date, invoice_no, vehicle_no, total_amount, net_amount, customers(full_name, sales_area)')
+          .eq('company_id', cid).gte('date', dateStart).lte('date', dateEnd).order('date', { ascending: false });
         rows = (d || []).map((i, n) => ({
-          '#':         n + 1,
-          'Date':      i.created_at?.split('T')[0],
-          'Invoice No':i.invoice_no,
-          'Customer':  i.customers?.full_name || '-',
-          'Area':      i.customers?.sales_area || '-',
-          'Vehicle':   i.vehicle_no || '-',
-          'Amount':    i.total_amount || 0,
+          '#':          n + 1,
+          'Date':       i.date || '-',
+          'Invoice No': i.invoice_no,
+          'Customer':   i.customers?.full_name || '-',
+          'Area':       i.customers?.sales_area || '-',
+          'Vehicle':    i.vehicle_no || '-',
+          'Amount':     i.total_amount || 0,
+          'Net Amount': i.net_amount || i.total_amount || 0,
         }));
       }
 
+      else if (activeReport === 'sales_report') {
+        const { data: invs } = await supabase.from('invoices')
+          .select('id, date, invoice_no, vehicle_no, customers(full_name, sales_area)')
+          .eq('company_id', cid).gte('date', dateStart).lte('date', dateEnd);
+        const invIds = (invs||[]).map(i => i.id);
+        if (invIds.length === 0) { rows = []; }
+        else {
+          // quantity=cases, qty_bottles=loose, join inventory for actual bpc
+          const { data: items } = await supabase.from('invoice_items')
+            .select('invoice_id, quantity, qty_bottles, unit_price, total, inventory:inventory_id(name, bottles_per_case)')
+            .in('invoice_id', invIds).neq('is_free', true);
+          const invMap: Record<string,any> = {};
+          (invs||[]).forEach(i => { invMap[i.id] = i; });
+          let n = 0;
+          rows = (items||[]).map((item: any) => {
+            const inv = invMap[item.invoice_id] || {};
+            const bpc = item.inventory?.bottles_per_case || 12;
+            const cs  = item.quantity || 0;
+            const bt  = item.qty_bottles || 0;
+            return {
+              '#':           ++n,
+              'Date':        inv.date || '-',
+              'Invoice No':  inv.invoice_no || '-',
+              'Customer':    inv.customers?.full_name || '-',
+              'Area':        inv.customers?.sales_area || '-',
+              'Vehicle':     inv.vehicle_no || '-',
+              'Product':     item.inventory?.name || '-',
+              'BPC':         bpc,
+              'Cases':       cs,
+              'Bottles':     bt,
+              'Total Btl':   cs * bpc + bt,
+              'Unit Price':  item.unit_price || 0,
+              'Total (LKR)': item.total || 0,
+            };
+          });
+        }
+      }
+
+      else if (activeReport === 'item_wise_sales') {
+        // Product wise totals for date range
+        const { data: invs } = await supabase.from('invoices')
+          .select('id').eq('company_id', cid).gte('date', dateStart).lte('date', dateEnd);
+        const invIds = (invs||[]).map(i => i.id);
+        if (invIds.length === 0) { rows = []; }
+        else {
+          const { data: items } = await supabase.from('invoice_items')
+            .select('quantity, qty_bottles, unit_price, total, inventory:inventory_id(name, bottles_per_case)')
+            .in('invoice_id', invIds).neq('is_free', true);
+          // Group by product
+          const productMap: Record<string, any> = {};
+          (items||[]).forEach((item: any) => {
+            const name = item.inventory?.name || 'Unknown';
+            const bpc  = item.inventory?.bottles_per_case || 12;
+            const cs   = item.quantity || 0;
+            const bt   = item.qty_bottles || 0;
+            if (!productMap[name]) productMap[name] = { name, bpc, totalCS: 0, totalBT: 0, totalBtl: 0, totalAmt: 0 };
+            productMap[name].totalCS   += cs;
+            productMap[name].totalBT   += bt;
+            productMap[name].totalBtl  += cs * bpc + bt;
+            productMap[name].totalAmt  += item.total || 0;
+          });
+          rows = Object.values(productMap)
+            .sort((a,b) => b.totalAmt - a.totalAmt)
+            .map((p, n) => ({
+              '#':           n + 1,
+              'Product':     p.name,
+              'BPC':         p.bpc,
+              'Cases':       p.totalCS,
+              'Bottles':     p.totalBT,
+              'Total Btl':   p.totalBtl,
+              'Total (LKR)': Math.round(p.totalAmt),
+            }));
+        }
+      }
+
       else if (activeReport === 'free_issue') {
-        const { data: d } = await supabase.from('invoice_items')
-          .select('cases, qty_bottles, inventory:inventory_id(name), invoices!inner(invoice_no, created_at, company_id, customers(full_name))')
-          .eq('is_free', true).eq('invoices.company_id', cid)
-          .gte('invoices.created_at', ds).lte('invoices.created_at', de);
-        rows = (d || []).map((i: any, n: number) => ({
-          '#':         n + 1,
-          'Date':      i.invoices?.created_at?.split('T')[0],
-          'Invoice No':i.invoices?.invoice_no,
-          'Customer':  i.invoices?.customers?.full_name || '-',
-          'Product':   i.inventory?.name || '-',
-          'Cases':     i.cases || 0,
-          'Bottles':   i.qty_bottles || 0,
-        }));
+        const { data: invs } = await supabase.from('invoices')
+          .select('id, date, invoice_no, customers(full_name)')
+          .eq('company_id', cid).gte('date', dateStart).lte('date', dateEnd);
+        const invIds = (invs||[]).map((i:any) => i.id);
+        if (invIds.length === 0) { rows = []; }
+        else {
+          const invMap: Record<string,any> = {};
+          (invs||[]).forEach((i:any) => { invMap[i.id] = i; });
+          const { data: d } = await supabase.from('invoice_items')
+            .select('invoice_id, quantity, qty_bottles, inventory:inventory_id(name, bottles_per_case)')
+            .in('invoice_id', invIds).eq('is_free', true);
+          rows = (d || []).map((i: any, idx: number) => {
+            const inv = invMap[i.invoice_id] || {};
+            const bpc = i.inventory?.bottles_per_case || 12;
+            const cs  = i.quantity || 0;
+            const bt  = i.qty_bottles || 0;
+            return {
+              '#':         idx + 1,
+              'Date':      inv.date || '-',
+              'Invoice No':inv.invoice_no || '-',
+              'Customer':  inv.customers?.full_name || '-',
+              'Product':   i.inventory?.name || '-',
+              'BPC':       bpc,
+              'Cases':     cs,
+              'Bottles':   bt,
+              'Total Btl': cs * bpc + bt,
+            };
+          });
+        }
+      }
+
+      else if (activeReport === 'discount_report') {
+        const { data: invs } = await supabase.from('invoices')
+          .select('id, date, invoice_no, customers(full_name, sales_area)')
+          .eq('company_id', cid).gte('date', dateStart).lte('date', dateEnd);
+        const invIds = (invs||[]).map(i => i.id);
+        if (invIds.length === 0) { rows = []; }
+        else {
+          const { data: items } = await supabase.from('invoice_items')
+            .select('invoice_id, quantity, qty_bottles, unit_price, item_discount_per, item_discount_amt, total, inventory:inventory_id(name, bottles_per_case)')
+            .in('invoice_id', invIds).neq('is_free', true).gt('item_discount_per', 0);
+          const invMap: Record<string,any> = {};
+          (invs||[]).forEach(i => { invMap[i.id] = i; });
+          let n = 0;
+          rows = (items||[]).map((item: any) => {
+            const inv  = invMap[item.invoice_id] || {};
+            const bpc  = item.inventory?.bottles_per_case || 12;
+            const cs   = item.quantity || 0;
+            const bt   = item.qty_bottles || 0;
+            // item_discount_amt column exists in DB - use directly
+            const discAmt = item.item_discount_amt || Math.round((item.unit_price||0) * (cs + bt/bpc) * (item.item_discount_per||0) / 100);
+            return {
+              '#':           ++n,
+              'Date':        inv.date || '-',
+              'Invoice No':  inv.invoice_no || '-',
+              'Customer':    inv.customers?.full_name || '-',
+              'Area':        inv.customers?.sales_area || '-',
+              'Product':     item.inventory?.name || '-',
+              'BPC':         bpc,
+              'Cases':       cs,
+              'Bottles':     bt,
+              'Unit Price':  item.unit_price || 0,
+              'Discount %':  item.item_discount_per || 0,
+              'Disc Amount': discAmt,
+              'Net Total':   item.total || 0,
+            };
+          });
+        }
       }
 
       // ── CUSTOMERS ──────────────────────────────────────────────────────────
@@ -554,24 +693,41 @@ export default function ReportsPage() {
       </div>
 
       {/* ── PRINT VIEW ── */}
-      <div className="hidden print:block">
+      <div className="hidden print:block report-print-container">
+        {/* Print Header */}
+        <div className="report-print-header" style={{marginBottom:'6mm',borderBottom:'2px solid black',paddingBottom:'4mm'}}>
+          <h1 style={{fontSize:'14pt',fontWeight:900,textTransform:'uppercase',margin:0}}>{cr.label}</h1>
+          <p style={{fontSize:'8pt',color:'#555',marginTop:'2mm'}}>
+            Period: {dateStart} → {dateEnd} &nbsp;|&nbsp; Generated: {today} &nbsp;|&nbsp; Records: {data.length}
+          </p>
+        </div>
         {data.length > 0 && (
-          <table className="w-full text-xs border-collapse">
+          <table className="report-print-table" style={{width:'100%',borderCollapse:'collapse',fontSize:'8pt'}}>
             <thead>
-              <tr>{cols.map(col => <th key={col} className="border border-gray-400 px-2 py-1.5 text-left font-black bg-gray-200 uppercase text-[10px]">{col}</th>)}</tr>
+              <tr style={{background:'#1f2937',color:'white'}}>
+                {cols.map(col => (
+                  <th key={col} style={{padding:'4px 6px',textAlign:'left',fontSize:'7pt',fontWeight:900,textTransform:'uppercase',border:'0.5pt solid #555',whiteSpace:'nowrap'}}>
+                    {col}
+                  </th>
+                ))}
+              </tr>
             </thead>
             <tbody>
               {data.map((row, i) => (
-                <tr key={i} className={i % 2 ? 'bg-gray-50' : ''}>
-                  {cols.map(col => <td key={col} className="border border-gray-300 px-2 py-1.5 text-xs">{String(row[col] ?? '-')}</td>)}
+                <tr key={i} style={{background: i%2 ? '#f9fafb' : 'white'}}>
+                  {cols.map(col => (
+                    <td key={col} style={{padding:'3px 6px',border:'0.5pt solid #ddd',fontSize:'8pt',whiteSpace:'nowrap'}}>
+                      {typeof row[col] === 'number' ? row[col].toLocaleString() : String(row[col] ?? '-')}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
             {hasTotals && (
               <tfoot>
-                <tr className="bg-gray-900 text-white font-black">
+                <tr style={{background:'#1f2937',color:'white',fontWeight:900}}>
                   {cols.map(col => (
-                    <td key={col} className="border border-gray-600 px-2 py-2 text-xs">
+                    <td key={col} style={{padding:'4px 6px',border:'0.5pt solid #555',fontSize:'8pt',fontWeight:900}}>
                       {col === '#' ? 'TOTAL' : totals[col] !== undefined ? totals[col].toLocaleString() : ''}
                     </td>
                   ))}

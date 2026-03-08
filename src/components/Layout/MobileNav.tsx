@@ -9,7 +9,7 @@ const MobileNav = () => {
 
   const linkClass = "flex flex-col items-center justify-center gap-1 min-h-[56px] min-w-[56px] py-2 rounded-xl active:scale-95 transition-transform";
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-2 flex justify-between items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] rounded-t-[2rem] safe-area-pb">
+    <div className="lg:hidden print:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-2 flex justify-between items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] rounded-t-[2rem] safe-area-pb">
       <Link to="/" className={cn(linkClass, isActive('/') ? "text-blue-600" : "text-gray-400")}>
         <LayoutDashboard size={24} />
         <span className="text-[9px] font-black uppercase tracking-tighter italic">Home</span>
