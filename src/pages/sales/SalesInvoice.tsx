@@ -354,6 +354,7 @@ const SalesInvoice = () => {
   const [invoiceDate, setInvoiceDate]           = useState(new Date().toISOString().split('T')[0]);
   const [invoiceNo, setInvoiceNo]               = useState('Loading...');
   const [isSaving, setIsSaving]                 = useState(false);
+  const [orientation, setOrientation]           = useState<'portrait'|'landscape'>('portrait');
   const [items, setItems]                       = useState([{ inventory_id: '', cases: '' as any, qty_bottles: '' as any, units_per_case: 12, unit_price: 0, mrp_price: 0, special_price: 0, item_discount_per: 0, is_free: false, total: 0 }]);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [draftList, setDraftList]               = useState<any[]>([]);
@@ -737,6 +738,13 @@ const SalesInvoice = () => {
 
   return (
     <div className="p-4 bg-gray-50 min-h-screen print:bg-white print:p-0">
+      {/* Dynamic @page orientation */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          @page { size: A4 ${orientation}; margin: 0; }
+          body { -webkit-print-color-adjust: exact; }
+        }
+      `}} />
 
       {/* SEARCH */}
       <div className="max-w-6xl mx-auto no-print bg-white p-6 rounded-[2rem] shadow-sm border mb-6">
@@ -993,7 +1001,24 @@ const SalesInvoice = () => {
             <div><p className="text-[10px] text-gray-400">FREE CASES</p><p className="text-xl font-bold">{totalFreeCases}</p></div>
             <div><p className="text-[10px] text-gray-400">DISCOUNT</p><p className="text-xl font-bold">LKR {totalDiscountAmount.toFixed(2)}</p></div>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Portrait / Landscape toggle */}
+            <div className="flex bg-gray-700 rounded-xl p-1 gap-1">
+              <button
+                onClick={() => setOrientation('portrait')}
+                title="Portrait"
+                className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${orientation==='portrait' ? 'bg-white text-gray-900 shadow' : 'text-gray-400 hover:text-white'}`}>
+                <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><rect x="0" y="0" width="10" height="14" rx="1.5" opacity="0.3"/><rect x="1" y="1" width="8" height="12" rx="1"/></svg>
+                Portrait
+              </button>
+              <button
+                onClick={() => setOrientation('landscape')}
+                title="Landscape"
+                className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${orientation==='landscape' ? 'bg-white text-gray-900 shadow' : 'text-gray-400 hover:text-white'}`}>
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="0" width="14" height="10" rx="1.5" opacity="0.3"/><rect x="1" y="1" width="12" height="8" rx="1"/></svg>
+                Landscape
+              </button>
+            </div>
             <button onClick={addNewRow} className="bg-gray-700 px-6 py-3 rounded-xl font-bold text-xs uppercase">+ Item</button>
             <button onClick={handleSaveDraft} disabled={isSaving} className="bg-amber-500 hover:bg-amber-600 px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 uppercase text-white">
               📝 Save Draft
