@@ -126,10 +126,22 @@ const TransportLog = () => {
                   <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-1 block">Vehicle</label>
                   <select className="w-full p-3 bg-slate-50 rounded-xl font-bold text-xs outline-none"
                     value={formData.vehicle_id} onChange={e => setFormData({...formData, vehicle_id: e.target.value})}>
-                    <option value="">Select</option>
+                    <option value="">Select Vehicle</option>
                     {vehicles.map(v => <option key={v.id} value={v.id}>{v.vehicle_no}</option>)}
                   </select>
                 </div>
+              </div>
+
+              {/* Driver Select */}
+              <div>
+                <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-1 block flex items-center gap-1">
+                  <User size={10}/> Driver
+                </label>
+                <select className="w-full p-3 bg-slate-50 rounded-xl font-bold text-xs outline-none"
+                  value={formData.driver_id} onChange={e => setFormData({...formData, driver_id: e.target.value})}>
+                  <option value="">Select Driver</option>
+                  {drivers.map(d => <option key={d.id} value={d.id}>{d.driver_name}</option>)}
+                </select>
               </div>
 
               {/* Multi-Drop Checkbox List */}
