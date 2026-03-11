@@ -67,7 +67,7 @@ const InventoryPage = () => {
     const finalQty = (adjType === 'IN' ? 1 : -1) * ((adjCases * bpc) + adjBottles);
 
     const { error: moveError } = await supabase.from('stock_movements').insert([{
-      inventory_id: selectedProduct.id, 
+      product_id: selectedProduct.id, 
       quantity: finalQty,
       type: adjType === 'IN' ? 'RESTORE' : 'DAMAGE', 
       sub_type: adjSubType, 
@@ -115,7 +115,7 @@ const InventoryPage = () => {
         grnQ,
         invQ,
         invQ2,
-        supabase.from('stock_movements').select('inventory_id, product_id, quantity, type').in('type', ['MARKET_RETURN', 'DAMAGE_RETURN'])
+        supabase.from('stock_movements').select('product_id, quantity, type').in('type', ['MARKET_RETURN', 'DAMAGE_RETURN'])
       ]);
 
       const inventoryMap: Record<string, number> = {};
@@ -137,7 +137,7 @@ const InventoryPage = () => {
       });
 
       (returnsRes.data || []).forEach((r: any) => {
-        const pid = r.inventory_id || r.product_id;
+        const pid = r.product_id;
         if (pid && (Number(r.quantity) || 0) > 0) {
           if (!inventoryMap[pid]) inventoryMap[pid] = 0;
           inventoryMap[pid] += Number(r.quantity);
@@ -161,7 +161,7 @@ const InventoryPage = () => {
   // --- 4. History Logic ---
   const fetchItemHistory = async (product: any) => {
     setSelectedProduct(product);
-    const { data } = await supabase.from('stock_movements').select('*').eq('inventory_id', product.id).order('created_at', { ascending: false }).limit(10);
+    const { data } = await supabase.from('stock_movements').select('*').eq('product_id', product.id).order('created_at', { ascending: false }).limit(10);
     setHistoryData(data || []);
     setActiveModal('HISTORY');
   };
@@ -352,10 +352,9 @@ const InventoryPage = () => {
                     value={formData.bottles_per_case}
                     onChange={e => setFormData({...formData, bottles_per_case: parseInt(e.target.value)})}
                   >
-                    <option value={12}>12 Bottles</option>
-                    <option value={24}>24 Bottles</option>
-                    <option value={6}>6 Bottles</option>
-                    <option value={1}>Loose / Single</option>
+                    <option value={24}>24 Bottles (350ml)</option>
+                    <option value={12}>12 Bottles (750ml / 1500ml)</option>
+                    <option value={15}>15 Bottles (750ml)</option>
                   </select>
                 </div>
               </div>
