@@ -17,6 +17,15 @@ const fmtBtl = (totalBtl: number, bpc = 12) => {
   return '—';
 };
 
+
+// Format stock with correct CS/BT
+const fmtStock = (cs: number, bt: number) => {
+  if (cs > 0 && bt > 0) return `${cs.toLocaleString()} CS  ${bt} BT`;
+  if (cs > 0)            return `${cs.toLocaleString()} CS`;
+  if (bt > 0)            return `${bt} BT`;
+  return '—';
+};
+
 // Date range presets
 type Preset = 'today' | 'this_week' | 'this_month' | 'last_month' | 'this_year' | 'all';
 
@@ -77,6 +86,10 @@ const MainDashboard = () => {
     sampleBottles:   0,
     packDmgBottles:  0,
     stockBottles:    0,
+    stockCs:         0,
+    stockBt:         0,
+    issuedCs:        0,
+    issuedBt:        0,
     rawMaterials:    0,
     transportNet:    0,
   });
@@ -146,7 +159,7 @@ const MainDashboard = () => {
 
       // ── Stock Movements ───────────────────────────────────
       // Fetch all, filter client-side to handle timestamp format safely
-      let movQuery = supabase.from('stock_movements').select('quantity, type, date, created_at').eq('company_id', cid);
+      let movQuery = supabase.from('stock_movements').select('quantity, type, created_at').eq('company_id', cid);
 
       // ── Raw Materials ─────────────────────────────────────
       let rmQuery = supabase.from('raw_material_grn_items').select('quantity').eq('company_id', cid);
@@ -156,8 +169,8 @@ const MainDashboard = () => {
         grnQuery,
         movQuery,
         rmQuery,
-        supabase.from('inventory').select('quantity').eq('company_id', cid),
-        supabase.from('transport_log').select('hire_cost, advance_paid').eq('company_id', cid),
+        supabase.from('inventory').select('quantity, bottles_per_case').eq('company_id', cid),
+        supabase.from('transport_log').select('hire_cost, advance_paid'),
       ]);
 
       // GRN: client-side date filter (grn_date may be plain date or timestamp)
@@ -189,16 +202,14 @@ const MainDashboard = () => {
       const receivedBottles = (grnItemsRes.data || [])
         .reduce((a: number, c: any) => a + (c.quantity || 0), 0);
 
-      // Invoice: quantity = cases × bpc + loose
-      const issuedBottles = (invItemsRes.data || [])
-        .reduce((a: number, c: any) => {
-          const bpc = (c.inventory as any)?.bottles_per_case || 12;
-          return a + (c.quantity || 0) * bpc + (c.qty_bottles || 0);
-        }, 0);
+      // Invoice: quantity = cases (same field used by SalesDashboard + Reports)
+      const issuedCs      = (invItemsRes.data || []).reduce((a: number, c: any) => a + (Number(c.quantity) || 0), 0);
+      const issuedLooseBt = (invItemsRes.data || []).reduce((a: number, c: any) => a + (c.qty_bottles || 0), 0);
+      const issuedBottles = issuedCs * 12 + issuedLooseBt; // kept for backwards compat
 
       // Stock Movements: client-side date filter
       const allMov = (movRes.data || []).filter((m: any) => {
-        const raw = m.date || m.created_at;
+        const raw = m.created_at;
         if (!raw || (!start && !end)) return true;
         const d = raw.toString().substring(0, 10);
         if (start && d < start) return false;
@@ -211,11 +222,21 @@ const MainDashboard = () => {
       const packDmgBottles = allMov.filter((m:any) => m.type === 'PACK_DAMAGE')   .reduce((a:number,m:any)=>a+Math.abs(m.quantity||0),0);
 
       // Stock & Transport - always all time (snapshot)
-      const stockBottles = (stockRes.data    || []).reduce((a:number,c:any)=>a+(c.quantity||0),0);
+      // Stock: quantity = total bottles; convert to CS+BT using actual BPC per product
+      const stockCalc = (stockRes.data || []).reduce((acc:any, c:any) => {
+        const bpc = c.bottles_per_case || 12;
+        const totalBtl = c.quantity || 0;
+        acc.cs += Math.floor(totalBtl / bpc);
+        acc.bt += totalBtl % bpc;
+        return acc;
+      }, { cs: 0, bt: 0 });
+      const stockBottles = stockCalc.cs * 12 + stockCalc.bt; // keep for total bottles display
+      const stockCs = stockCalc.cs;
+      const stockBt = stockCalc.bt;
       const rawMaterials = (rawGrnRes.data   || []).reduce((a:number,c:any)=>a+(c.quantity||0),0);
       const transportNet = (transportRes.data|| []).reduce((a:number,c:any)=>a+((c.hire_cost||0)-(c.advance_paid||0)),0);
 
-      setStats({ receivedBottles, issuedBottles, returnBottles, damageBottles, sampleBottles, packDmgBottles, stockBottles, rawMaterials, transportNet });
+      setStats({ receivedBottles, issuedBottles, issuedCs, issuedBt: issuedLooseBt, returnBottles, damageBottles, sampleBottles, packDmgBottles, stockBottles, stockCs, stockBt, rawMaterials, transportNet });
     } catch (err) {
       console.error('Dashboard Error:', err);
     } finally {
@@ -315,8 +336,8 @@ const MainDashboard = () => {
               <ArrowUpRight size={14} className="text-blue-600" />
             </div>
             <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Issued (Invoice)</p>
-            <p className="text-base font-black text-blue-600 leading-tight mt-0.5">{fmtBtl(stats.issuedBottles)}</p>
-            <p className="text-[7px] text-slate-400">{stats.issuedBottles.toLocaleString()} btl</p>
+            <p className="text-base font-black text-blue-600 leading-tight mt-0.5">{fmtStock(stats.issuedCs, stats.issuedBt)}</p>
+            <p className="text-[7px] text-slate-400">{stats.issuedCs.toLocaleString()} CS  {stats.issuedBt} BT</p>
           </div>
 
           {/* Returns */}
@@ -342,7 +363,7 @@ const MainDashboard = () => {
               <Package size={14} className="text-slate-600" />
             </div>
             <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Stock On Hand</p>
-            <p className="text-base font-black text-slate-800 leading-tight mt-0.5">{fmtBtl(stats.stockBottles)}</p>
+            <p className="text-base font-black text-slate-800 leading-tight mt-0.5">{fmtStock(stats.stockCs, stats.stockBt)}</p>
             <p className="text-[7px] text-blue-400 font-bold">↑ Current</p>
           </div>
 
@@ -351,8 +372,8 @@ const MainDashboard = () => {
             className="bg-blue-600 rounded-2xl p-3 shadow-sm cursor-pointer active:scale-[0.97] transition-all col-span-2 flex items-center justify-between">
             <div>
               <p className="text-[7px] font-black text-blue-200 uppercase tracking-wider">Total Issued · {activeLabel}</p>
-              <p className="text-xl font-black text-white leading-tight mt-0.5">{fmtBtl(stats.issuedBottles)}</p>
-              <p className="text-[7px] text-blue-200">{stats.issuedBottles.toLocaleString()} bottles invoiced</p>
+              <p className="text-xl font-black text-white leading-tight mt-0.5">{fmtStock(stats.issuedCs, stats.issuedBt)}</p>
+              <p className="text-[7px] text-blue-200">{stats.issuedCs.toLocaleString()} CS  {stats.issuedBt} BT invoiced</p>
             </div>
             <div className="bg-white/20 w-10 h-10 rounded-xl flex items-center justify-center">
               <ShoppingCart size={20} className="text-white" />
@@ -456,8 +477,8 @@ const MainDashboard = () => {
             <div onClick={() => navigate('/sales/new-invoice')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
               <div className="bg-blue-50 text-blue-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-blue-600 group-hover:text-white transition-all"><ArrowUpRight size={22}/></div>
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Issued Goods (Invoice)</p>
-              <h3 className="text-3xl font-black text-blue-600 italic">{fmtBtl(stats.issuedBottles)}</h3>
-              <p className="text-[9px] text-slate-400 mt-2">{stats.issuedBottles.toLocaleString()} total bottles</p>
+              <h3 className="text-3xl font-black text-blue-600 italic">{fmtStock(stats.issuedCs, stats.issuedBt)}</h3>
+              <p className="text-[9px] text-slate-400 mt-2">{stats.issuedCs.toLocaleString()} CS  {stats.issuedBt} BT</p>
               <div className="mt-3 flex items-center gap-1 text-blue-600 font-bold text-[10px] uppercase">New Invoice <ArrowUpRight size={11}/></div>
             </div>
             <div onClick={() => navigate('/inventory/returns')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
@@ -474,15 +495,15 @@ const MainDashboard = () => {
             <div onClick={() => navigate('/inventory')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
               <div className="bg-slate-100 text-slate-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-slate-800 group-hover:text-white transition-all"><Package size={22}/></div>
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock On Hand</p>
-              <h3 className="text-3xl font-black text-slate-800 italic">{fmtBtl(stats.stockBottles)}</h3>
-              <p className="text-[9px] text-slate-400 mt-2">{stats.stockBottles.toLocaleString()} total bottles</p>
+              <h3 className="text-3xl font-black text-slate-800 italic">{fmtStock(stats.stockCs, stats.stockBt)}</h3>
+              <p className="text-[9px] text-slate-400 mt-2">{(stats.stockCs * 12 + stats.stockBt).toLocaleString()} total bottles</p>
               <p className="text-[9px] text-blue-400 font-bold">↑ Current snapshot</p>
             </div>
             <div onClick={() => navigate('/dashboard/sales')} className="bg-blue-600 p-5 rounded-[2rem] shadow-xl cursor-pointer hover:bg-blue-700 transition-all col-span-2 active:scale-[0.97]">
               <div className="bg-white/20 text-white p-3 rounded-2xl w-fit mb-4"><ShoppingCart size={26}/></div>
               <p className="text-[9px] font-black text-blue-200 uppercase tracking-widest mb-1">Total Issued · {activeLabel}</p>
-              <h3 className="text-4xl font-black text-white italic">{fmtBtl(stats.issuedBottles)}</h3>
-              <p className="text-[9px] text-blue-200 mt-2">{stats.issuedBottles.toLocaleString()} bottles invoiced</p>
+              <h3 className="text-4xl font-black text-white italic">{fmtStock(stats.issuedCs, stats.issuedBt)}</h3>
+              <p className="text-[9px] text-blue-200 mt-2">{stats.issuedCs.toLocaleString()} CS  {stats.issuedBt} BT invoiced</p>
             </div>
             <div onClick={() => navigate('/inventory/raw-materials/grn/new')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
               <div className="bg-amber-50 text-amber-500 p-3 rounded-2xl w-fit mb-4 group-hover:bg-amber-500 group-hover:text-white transition-all"><Box size={22}/></div>
