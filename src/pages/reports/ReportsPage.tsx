@@ -273,7 +273,7 @@ export default function ReportsPage() {
           .eq('company_id', cid).gte('date', dateStart).lte('date', dateEnd).order('date', { ascending: false });
         rows = (d || []).map((i, n) => ({
           '#':          n + 1,
-          'Date':       i.date || '-',
+          'Date':       (i.date||'-').toString().slice(0,10),
           'Invoice No': i.invoice_no,
           'Customer':   i.customers?.full_name || '-',
           'Area':       i.customers?.sales_area || '-',
@@ -304,7 +304,7 @@ export default function ReportsPage() {
             const bt  = item.qty_bottles || 0;
             return {
               '#':           ++n,
-              'Date':        inv.date || '-',
+              'Date':        (inv.date||'-').toString().slice(0,10),
               'Invoice No':  inv.invoice_no || '-',
               'Customer':    inv.customers?.full_name || '-',
               'Area':        inv.customers?.sales_area || '-',
@@ -377,7 +377,7 @@ export default function ReportsPage() {
             const bt  = i.qty_bottles || 0;
             return {
               '#':         idx + 1,
-              'Date':      inv.date || '-',
+              'Date':      (inv.date||'-').toString().slice(0,10),
               'Invoice No':inv.invoice_no || '-',
               'Customer':  inv.customers?.full_name || '-',
               'Product':   i.inventory?.name || '-',
@@ -412,7 +412,7 @@ export default function ReportsPage() {
             const discAmt = item.item_discount_amt || Math.round((item.unit_price||0) * (cs + bt/bpc) * (item.item_discount_per||0) / 100);
             return {
               '#':           ++n,
-              'Date':        inv.date || '-',
+              'Date':        (inv.date||'-').toString().slice(0,10),
               'Invoice No':  inv.invoice_no || '-',
               'Customer':    inv.customers?.full_name || '-',
               'Area':        inv.customers?.sales_area || '-',
@@ -444,7 +444,7 @@ export default function ReportsPage() {
         const { data: d } = await q.order('date', { ascending: false });
         rows = (d || []).map((l, n) => ({
           '#':           n + 1,
-          'Date':        l.date,
+          'Date':        (l.date||'-').toString().slice(0,10),
           'Customer':    l.customers?.full_name || '-',
           'Type':        l.type || '-',
           'Reference':   l.reference || '-',
@@ -725,7 +725,11 @@ export default function ReportsPage() {
                               : col === 'Status' && row[col] === 'Credit' ? <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-black">{row[col]}</span>
                               : col === 'Status' && row[col] === 'Paid'   ? <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-black">{row[col]}</span>
                               : typeof row[col] === 'number' ? <span className="font-black text-gray-900">{row[col].toLocaleString()}</span>
-                              : String(row[col] ?? '-')}
+                              : (() => {
+                                const v = row[col];
+                                if (col === 'Date' && v && v !== '-') return String(v).slice(0,10);
+                                return String(v ?? '-');
+                              })()}
                             </td>
                           ))}
                         </tr>
@@ -777,7 +781,11 @@ export default function ReportsPage() {
                 <tr key={i} style={{background: i%2 ? '#f9fafb' : 'white'}}>
                   {cols.map(col => (
                     <td key={col} style={{padding:'3px 6px',border:'0.5pt solid #ddd',fontSize:'8pt',whiteSpace:'nowrap'}}>
-                      {typeof row[col] === 'number' ? row[col].toLocaleString() : String(row[col] ?? '-')}
+                      {typeof row[col] === 'number' ? row[col].toLocaleString() : (() => {
+                                const v = row[col];
+                                if (col === 'Date' && v && v !== '-') return String(v).slice(0,10);
+                                return String(v ?? '-');
+                              })()}
                     </td>
                   ))}
                 </tr>

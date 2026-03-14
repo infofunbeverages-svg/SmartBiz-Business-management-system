@@ -80,44 +80,89 @@ const ProtectedRoute = ({ children, permId }: { children: React.ReactNode; permI
   return <>{children}</>;
 };
 
+// ─── Auto Logout Constants ────────────────────────────────────────────────────
+const IDLE_TIMEOUT   = 10 * 60 * 1000; // 10 minutes
+const WARN_BEFORE    =  2 * 60 * 1000; // warn 2 min before logout
+
 function App() {
-  const [session, setSession] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const timeoutRef = useRef<any>(null);
+  const [session, setSession]       = useState<any>(null);
+  const [isLoading, setIsLoading]   = useState(true);
+  const [showWarning, setShowWarning] = useState(false);
+  const [countdown, setCountdown]   = useState(120); // seconds
+
+  const logoutTimer  = useRef<any>(null);
+  const warnTimer    = useRef<any>(null);
+  const countdownRef = useRef<any>(null);
+  const sessionRef   = useRef<any>(null);
+
+  // Keep ref in sync so event handlers can read latest session
+  useEffect(() => { sessionRef.current = session; }, [session]);
 
   const handleLogout = async () => {
+    clearAll();
+    setShowWarning(false);
     await supabase.auth.signOut();
     setSession(null);
   };
 
+  const clearAll = () => {
+    clearTimeout(logoutTimer.current);
+    clearTimeout(warnTimer.current);
+    clearInterval(countdownRef.current);
+  };
+
   const resetTimer = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
+    if (!sessionRef.current) return;
+    clearAll();
+    setShowWarning(false);
+
+    // Warn 2 min before
+    warnTimer.current = setTimeout(() => {
+      setShowWarning(true);
+      setCountdown(120);
+      countdownRef.current = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) { clearInterval(countdownRef.current); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+    }, IDLE_TIMEOUT - WARN_BEFORE);
+
+    // Auto logout after full idle time
+    logoutTimer.current = setTimeout(() => {
       handleLogout();
-    }, 10 * 60 * 1000); 
+    }, IDLE_TIMEOUT);
   };
 
   useEffect(() => {
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setIsLoading(false);
     });
 
+    // Auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) resetTimer();
     });
 
-    const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
-    if (session) {
-      events.forEach(event => window.addEventListener(event, resetTimer));
-      resetTimer();
-    }
+    return () => { subscription.unsubscribe(); };
+  }, []);
 
+  // Start/stop idle timer based on session
+  useEffect(() => {
+    const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart', 'click'];
+    if (session) {
+      events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
+      resetTimer();
+    } else {
+      clearAll();
+      setShowWarning(false);
+      events.forEach(e => window.removeEventListener(e, resetTimer));
+    }
     return () => {
-      subscription.unsubscribe();
-      events.forEach(event => window.removeEventListener(event, resetTimer));
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      clearAll();
+      events.forEach(e => window.removeEventListener(e, resetTimer));
     };
   }, [session]);
 
@@ -127,6 +172,41 @@ function App() {
 
   return (
     <Router>
+      {/* ── AUTO LOGOUT WARNING MODAL ─────────────────────────────── */}
+      {showWarning && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center border border-orange-100">
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">⏰</span>
+            </div>
+            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-1">
+              Still There?
+            </h2>
+            <p className="text-sm font-bold text-gray-500 mb-4">
+              No activity detected. You'll be logged out in
+            </p>
+            <div className="text-5xl font-black text-orange-500 mb-1 tabular-nums">
+              {String(Math.floor(countdown / 60)).padStart(2,'0')}:{String(countdown % 60).padStart(2,'0')}
+            </div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6">minutes : seconds</p>
+            <div className="flex gap-3">
+              <button
+                onClick={resetTimer}
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl text-sm uppercase transition-all shadow-lg shadow-blue-100"
+              >
+                ✅ I'm Here
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-black rounded-2xl text-sm uppercase transition-all"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Routes>
         <Route path="/login" element={session ? <Navigate to="/" /> : <LoginPage />} />
         

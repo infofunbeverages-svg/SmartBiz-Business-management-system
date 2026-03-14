@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { logActivity } from '../../utils/activityLogger';
 
 const PaymentManager = () => {
   const [payments, setPayments] = useState<any[]>([]);
@@ -31,7 +32,8 @@ const PaymentManager = () => {
         .eq('reference', payment.reference_no)
         .eq('customer_id', payment.customer_id)
         .eq('type', 'Payment');
-      alert('Payment marked as Cleared!');
+      alert('Payment marked as Cleared!')
+      await logActivity({ company_id: company?.id || '', module: 'FINANCE', action: 'PAYMENT_CLEARED', details: {} });
       fetchPayments();
     } catch (err: any) {
       alert(err.message);
@@ -81,6 +83,7 @@ const PaymentManager = () => {
       }
 
       alert('Cheque marked as Returned. Outstanding updated.');
+      await logActivity({ company_id: company?.id || '', module: 'FINANCE', action: 'CHEQUE_RETURNED', details: {} });
       setShowReturnModal(false);
       setReturningPayment(null);
       fetchPayments();

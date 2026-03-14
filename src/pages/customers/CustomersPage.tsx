@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Phone, MapPin, Loader2, Navigation, Edit3, Ruler, CreditCard, Tent, AlertTriangle, ExternalLink } from 'lucide-react'; 
 import { useCompany } from '../../utils/useCompany';
+import { logActivity } from '../../utils/activityLogger';
 
 const WAREHOUSE_COORDS = { lat: 6.78795, lng: 80.05799 }; 
 
@@ -118,6 +119,7 @@ const CustomersPage = () => {
         : await supabase.from('customers').insert([finalPayload]);
 
     if (!error) { 
+        await logActivity({ company_id: company?.id || '', module: 'CUSTOMERS', action: editingId ? 'CUSTOMER_UPDATED' : 'CUSTOMER_CREATED', details: { name: finalPayload.full_name } });
         setShowAddForm(false); setEditingId(null); fetchData(); 
         setNewCustomer({ 
             full_name: '', phone: '', email: '', address: '', br_number: '', id_number: '', 

@@ -80,6 +80,8 @@ const MainDashboard = () => {
 
   const [stats, setStats] = useState({
     receivedBottles: 0,
+    receivedCs: 0,
+    receivedBt: 0,
     issuedBottles:   0,
     returnBottles:   0,
     damageBottles:   0,
@@ -184,7 +186,7 @@ const MainDashboard = () => {
       }).map((g: any) => g.id);
       // ── GRN Items ─────────────────────────────────────────
       const grnItemsRes = grnIds.length > 0
-        ? await supabase.from('grn_items').select('quantity').in('grn_id', grnIds)
+        ? await supabase.from('grn_items').select('quantity, inventory:product_id(bottles_per_case)').in('grn_id', grnIds)
         : { data: [] };
 
       // ── Invoice Items ─────────────────────────────────────
@@ -198,7 +200,16 @@ const MainDashboard = () => {
 
       // ── Calculations ──────────────────────────────────────
 
-      // GRN: quantity = total bottles ✅
+      // GRN: quantity = total bottles, calc CS using actual BPC per product ✅
+      let receivedCs = 0, receivedBtLoose = 0;
+      (grnItemsRes.data || []).forEach((g: any) => {
+        const bpc = g.inventory?.bottles_per_case || 12;
+        const qty = g.quantity || 0;
+        receivedCs      += Math.floor(qty / bpc);
+        receivedBtLoose += qty % bpc;
+      });
+      receivedCs      += Math.floor(receivedBtLoose / 12);
+      receivedBtLoose  = receivedBtLoose % 12;
       const receivedBottles = (grnItemsRes.data || [])
         .reduce((a: number, c: any) => a + (c.quantity || 0), 0);
 
@@ -236,7 +247,7 @@ const MainDashboard = () => {
       const rawMaterials = (rawGrnRes.data   || []).reduce((a:number,c:any)=>a+(c.quantity||0),0);
       const transportNet = (transportRes.data|| []).reduce((a:number,c:any)=>a+((c.hire_cost||0)-(c.advance_paid||0)),0);
 
-      setStats({ receivedBottles, issuedBottles, issuedCs, issuedBt: issuedLooseBt, returnBottles, damageBottles, sampleBottles, packDmgBottles, stockBottles, stockCs, stockBt, rawMaterials, transportNet });
+      setStats({ receivedBottles, receivedCs, receivedBt: receivedBtLoose, issuedBottles, issuedCs, issuedBt: issuedLooseBt, returnBottles, damageBottles, sampleBottles, packDmgBottles, stockBottles, stockCs, stockBt, rawMaterials, transportNet });
     } catch (err) {
       console.error('Dashboard Error:', err);
     } finally {
@@ -325,8 +336,8 @@ const MainDashboard = () => {
               <ArrowDownLeft size={14} className="text-emerald-600" />
             </div>
             <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Received (GRN)</p>
-            <p className="text-base font-black text-emerald-600 leading-tight mt-0.5">{fmtBtl(stats.receivedBottles)}</p>
-            <p className="text-[7px] text-slate-400">{stats.receivedBottles.toLocaleString()} btl</p>
+            <p className="text-base font-black text-emerald-600 leading-tight mt-0.5">{fmtStock(stats.receivedCs, stats.receivedBt)}</p>
+            <p className="text-[7px] text-slate-400">{stats.receivedCs.toLocaleString()} CS  {stats.receivedBt} BT</p>
           </div>
 
           {/* Issued Invoice */}
@@ -470,8 +481,8 @@ const MainDashboard = () => {
             <div onClick={() => navigate('/inventory/grn/new')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">
               <div className="bg-emerald-50 text-emerald-600 p-3 rounded-2xl w-fit mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all"><ArrowDownLeft size={22}/></div>
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Received Goods (GRN)</p>
-              <h3 className="text-3xl font-black text-emerald-600 italic">{fmtBtl(stats.receivedBottles)}</h3>
-              <p className="text-[9px] text-slate-400 mt-2">{stats.receivedBottles.toLocaleString()} total bottles</p>
+              <h3 className="text-3xl font-black text-emerald-600 italic">{fmtStock(stats.receivedCs, stats.receivedBt)}</h3>
+              <p className="text-[9px] text-slate-400 mt-2">{stats.receivedCs.toLocaleString()} CS  {stats.receivedBt} BT  ({stats.receivedBottles.toLocaleString()} btl)</p>
               <div className="mt-3 flex items-center gap-1 text-emerald-600 font-bold text-[10px] uppercase">Add GRN <ArrowUpRight size={11}/></div>
             </div>
             <div onClick={() => navigate('/sales/new-invoice')} className="bg-white p-5 rounded-[2rem] shadow-xl cursor-pointer hover:shadow-2xl transition-all group active:scale-[0.97]">

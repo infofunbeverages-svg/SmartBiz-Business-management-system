@@ -12,14 +12,16 @@ export const logActivity = async ({
   details?: Record<string, any>;
 }) => {
   try {
+    if (!company_id) return; // skip if company not loaded
     const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from('activity_logs').insert([{
+    const { error } = await supabase.from('activity_logs').insert([{
       company_id,
       user_id:    user?.id || null,
       module,
       action,
       details:    details || null,
     }]);
+    if (error) console.warn('Activity log insert error:', error.message);
   } catch (e) {
     // Silent fail - don't break main flow
     console.warn('Activity log failed:', e);

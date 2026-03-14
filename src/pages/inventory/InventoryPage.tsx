@@ -3,6 +3,7 @@ import { supabase } from '../../supabaseClient';
 import TableView from '../../components/common/TableView';
 import { Card, CardContent } from '../../components/ui/Card';
 import { useCompany } from '../../utils/useCompany';
+import { logActivity } from '../../utils/activityLogger';
 import { 
   Plus, Pencil, Trash2, History, PackagePlus, 
   RefreshCcw, Search, X, Package, Loader2, Calculator
@@ -150,6 +151,7 @@ const InventoryPage = () => {
         await supabase.from('inventory').update({ quantity: balance }).eq('id', productId);
       }
       alert('Inventory balance synced! GRN - Invoice + Returns = Balance');
+      await logActivity({ company_id: company?.id || '', module: 'INVENTORY', action: 'STOCK_SYNCED', details: {} });
       fetchProducts();
     } catch (err: any) {
       alert('Sync error: ' + err.message);

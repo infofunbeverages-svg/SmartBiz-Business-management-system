@@ -22,17 +22,28 @@ const ActivityLogPage = () => {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch logs without join (no FK relationship in schema)
+      const { data: logData, error } = await supabase
         .from('activity_logs')
-        .select(`
-          *,
-          profiles:user_id (full_name)
-        `)
+        .select('*')
         .eq('company_id', company?.id)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(200);
 
       if (error) throw error;
+
+      // Fetch user names separately from profiles
+      const userIds = [...new Set((logData||[]).map((l:any)=>l.user_id).filter(Boolean))];
+      let userMap: Record<string,string> = {};
+      if(userIds.length > 0){
+        const { data: pData } = await supabase.from('profiles').select('id,full_name').in('id', userIds);
+        (pData||[]).forEach((p:any)=>{ userMap[p.id] = p.full_name; });
+      }
+      // Attach user names to logs
+      const data = (logData||[]).map((l:any)=>({
+        ...l,
+        profiles: { full_name: userMap[l.user_id] || null }
+      }));
       setLogs(data || []);
     } catch (error: any) {
       console.error('Error fetching logs:', error.message);
