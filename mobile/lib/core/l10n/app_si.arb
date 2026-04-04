@@ -1,0 +1,16 @@
+{
+  "appName": "SimplERP",
+  "login": "පිවිසුම",
+  "email": "විද්‍යුත් තැපෑල",
+  "password": "මුරපදය",
+  "pleaseEnterEmail": "කරුණාකර ඔබගේ විද්‍යුත් තැපෑල ඇතුළත් කරන්න",
+  "pleaseEnterPassword": "කරුණාකර ඔබගේ මුරපදය ඇතුළත් කරන්න",
+  "superAdmin": "ප්‍රධාන පරිපාලක",
+  "agencyOwner": "ඒජන්සි හිමිකරු",
+  "salesRep": "විකුණුම් නියෝජිත",
+  "dashboard": "උපකරණ පුවරුව",
+  "sales": "විකුණුම්",
+  "stock": "තොග",
+  "orders": "ඇණවුම්",
+  "reports": "වාර්තා"
+}
