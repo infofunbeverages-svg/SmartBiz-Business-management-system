@@ -47,7 +47,12 @@ const OrdersPage: React.FC = () => {
 
   // FIX: Invoice data load කරලා popup window ගෙ original layout print කරනවා
   const generatePDF = async (inv: any) => {
-    // 1. Invoice items + customer data load
+    // 1. Popup FIRST (click event ගෙ sync ගෙ open - browser block කරන්නේ නෑ)
+    const popup = window.open('', '_blank', 'width=900,height=700');
+    if (!popup) { alert('Popup blocked! Please allow popups for this site.'); return; }
+    popup.document.write('<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial"><p style="font-size:16px;color:#666">Loading invoice...</p></body></html>');
+
+    // 2. Invoice items + customer data load
     const { data: lines } = await supabase
       .from('invoice_items')
       .select(`quantity, qty_bottles, unit_price, total, is_free, item_discount_per, inventory:inventory_id ( name, bottles_per_case )`)
@@ -209,12 +214,10 @@ const OrdersPage: React.FC = () => {
       <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); }; }</script>
       </body></html>`;
 
-    // 4. Popup window ගෙ open කරලා print
-    const popup = window.open('', '_blank', 'width=900,height=700');
-    if (popup) {
-      popup.document.write(html);
-      popup.document.close();
-    }
+    // 4. Popup ගෙ content write කරනවා
+    popup.document.open();
+    popup.document.write(html);
+    popup.document.close();
   };
 
   const orderColumns = [
