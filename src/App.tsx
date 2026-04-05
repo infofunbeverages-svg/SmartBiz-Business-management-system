@@ -10,6 +10,7 @@ import AddGRNPage from './pages/inventory/AddGRNPage';
 import RawMaterialsPage from './pages/inventory/RawMaterialsPage';
 import AddRawMaterialGRNPage from './pages/inventory/AddRawMaterialGRNPage';
 import RawMaterialIssuePage from './pages/inventory/RawMaterialIssuePage';
+import StockCountPage from './pages/inventory/StockCountPage';
 import ReturnsAndDamagesPage from './pages/inventory/ReturnsAndDamagesPage'; 
 
 // --- අලුත් Reports Path එක මෙතනට Update කළා ---
@@ -222,6 +223,7 @@ function App() {
           <Route path="/inventory/raw-materials" element={<RawMaterialsPage />} />
           <Route path="/inventory/raw-materials/grn/new" element={<ProtectedRoute permId="inv_raw_material_grn"><AddRawMaterialGRNPage /></ProtectedRoute>} />
           <Route path="/inventory/raw-materials/issue" element={<ProtectedRoute permId="inv_raw_material_grn"><RawMaterialIssuePage /></ProtectedRoute>} />
+          <Route path="/inventory/stock-count" element={<ProtectedRoute permId="inv_add_grn"><StockCountPage /></ProtectedRoute>} />
           <Route path="/inventory/returns" element={<ProtectedRoute permId="inv_returns_damages"><ReturnsAndDamagesPage /></ProtectedRoute>} />
           <Route path="/inventory/grn/new" element={<ProtectedRoute permId="inv_add_grn"><AddGRNPage /></ProtectedRoute>} />
           <Route path="/inventory/reports" element={<ProtectedRoute permId="inv_stock_movement"><ReportsPage /></ProtectedRoute>} />

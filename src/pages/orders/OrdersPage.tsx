@@ -7,6 +7,7 @@ import { supabase } from '../../supabaseClient';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import { useCompany } from '../../utils/useCompany';
+import { logActivity } from '../../utils/activityLogger';
 
 const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -45,12 +46,12 @@ const OrdersPage: React.FC = () => {
 
   useEffect(() => { fetchInvoices(); }, [company?.id]);
 
-  // FIX: Invoice data load කරලා popup window ගෙ original layout print කරනවා
+  // FIX: iframe approach - popup blocker ගෙ bypass කරනවා
   const generatePDF = async (inv: any) => {
-    // 1. Popup FIRST (click event ගෙ sync ගෙ open - browser block කරන්නේ නෑ)
-    const popup = window.open('', '_blank', 'width=900,height=700');
-    if (!popup) { alert('Popup blocked! Please allow popups for this site.'); return; }
-    popup.document.write('<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial"><p style="font-size:16px;color:#666">Loading invoice...</p></body></html>');
+    // 1. Hidden iframe create (popup block නෑ!)
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;opacity:0;';
+    document.body.appendChild(iframe);
 
     // 2. Invoice items + customer data load
     const { data: lines } = await supabase
@@ -214,10 +215,22 @@ const OrdersPage: React.FC = () => {
       <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); }; }</script>
       </body></html>`;
 
-    // 4. Popup ගෙ content write කරනවා
-    popup.document.open();
-    popup.document.write(html);
-    popup.document.close();
+    // Log download activity
+    await logActivity({ company_id: company?.id || '', module: 'SALES', action: 'INVOICE_DOWNLOADED', details: { invoice_no: inv.invoiceNo, customer: inv.customerName } });
+
+    // 4. iframe ගෙ content write කරලා print
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) { document.body.removeChild(iframe); return; }
+    iframeDoc.open();
+    iframeDoc.write(html.replace('<script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); }; }</script>', ''));
+    iframeDoc.close();
+
+    // Logo load වෙනකම් wait කරනවා, ඊට පස්සේ print
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => { document.body.removeChild(iframe); }, 1000);
+    }, 800);
   };
 
   const orderColumns = [

@@ -75,10 +75,13 @@ export default function ReportsPage() {
   const [dateEnd,        setDateEnd]        = useState(today);
   const [custFilter,     setCustFilter]     = useState('');
   const [suppFilter,     setSuppFilter]     = useState('');
+  const [itemFilter,     setItemFilter]     = useState('');
+  const [areaFilter,     setAreaFilter]     = useState('');
   const [data,           setData]           = useState<any[]>([]);
   const [loading,        setLoading]        = useState(false);
   const [customers,      setCustomers]      = useState<any[]>([]);
   const [suppliers,      setSuppliers]      = useState<any[]>([]);
+  const [inventory,      setInventory]      = useState<any[]>([]);
   const [filtersLoaded,  setFiltersLoaded]  = useState(false);
   const [hasRun,         setHasRun]         = useState(false);
 
@@ -92,8 +95,10 @@ export default function ReportsPage() {
       supabase.from('customers').select('id, full_name').eq('company_id', company.id).order('full_name'),
       supabase.from('suppliers').select('id, name').eq('company_id', company.id).order('name'),
     ]);
+    const inv = await supabase.from('inventory').select('id, name').eq('company_id', company.id).order('name');
     setCustomers(c.data || []);
     setSuppliers(s.data || []);
+    setInventory(inv.data || []);
     setFiltersLoaded(true);
   };
 
@@ -250,19 +255,25 @@ export default function ReportsPage() {
           market_return: 'MARKET_RETURN', goods_return: 'RETURN',
           damage_return: 'DAMAGE_RETURN', sample_report: 'SAMPLE',
         };
-        const { data: d } = await supabase.from('stock_movements')
-          .select('created_at, quantity, notes, inventory:product_id(name, bottles_per_case), customers:customer_id(full_name)')
+        let rq = supabase.from('stock_movements')
+          .select('created_at, quantity, note, sub_type, return_ref, inventory_id, customer_id, inventory:inventory_id(name, bottles_per_case), customer:customer_id(full_name, sales_area)')
           .eq('company_id', cid).eq('type', typeMap[activeReport])
           .gte('created_at', ds).lte('created_at', de).order('created_at', { ascending: false });
-        rows = (d || []).map((i, n) => ({
-          '#':         n + 1,
-          'Date':      i.created_at?.split('T')[0],
-          'Product':   i.inventory?.name || '-',
-          'Customer':  i.customers?.full_name || '-',
-          'Cases':     Math.floor(Math.abs(i.quantity || 0) / (i.inventory?.bottles_per_case || 12)),
-          'Bottles':   Math.abs(i.quantity || 0) % (i.inventory?.bottles_per_case || 12),
-          'Qty (Btl)': Math.abs(i.quantity || 0),
-          'Notes':     i.notes || '-',
+        if (custFilter) rq = rq.eq('customer_id', custFilter);
+        if (itemFilter) rq = rq.eq('inventory_id', itemFilter);
+        const { data: d } = await rq;
+        rows = (d || []).map((i: any, n: number) => ({
+          '#':           n + 1,
+          'Date':        i.created_at?.split('T')[0] || '-',
+          'Ref':         i.return_ref || '-',
+          'Customer':    i.customer?.full_name || '-',
+          'Area':        i.customer?.sales_area || '-',
+          'Product':     i.inventory?.name || '-',
+          'Cases':       Math.floor(Math.abs(i.quantity || 0) / (i.inventory?.bottles_per_case || 12)),
+          'Bottles':     Math.abs(i.quantity || 0) % (i.inventory?.bottles_per_case || 12),
+          'Qty (Btl)':   Math.abs(i.quantity || 0),
+          'Sub Type':    i.sub_type || '-',
+          'Note':        i.note || '-',
         }));
       }
 
@@ -518,7 +529,7 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [company, activeReport, dateStart, dateEnd, custFilter, suppFilter]);
+  }, [company, activeReport, dateStart, dateEnd, custFilter, suppFilter, itemFilter, areaFilter]);
 
   // ── Exports ────────────────────────────────────────────────────────────────
   const exportExcel = () => {

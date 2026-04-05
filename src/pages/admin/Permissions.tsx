@@ -4,13 +4,16 @@ import { Shield, CheckCircle2, XCircle, Loader2, Users } from 'lucide-react';
 
 const PERMISSION_GROUPS = [
   { group: 'INVENTORY', color: 'blue', perms: [
-    { id: 'inv_add_grn',          label: 'Add GRN' },
-    { id: 'inv_raw_material_grn', label: 'Add Raw Materials GRN' },
+    { id: 'inv_add_grn',          label: 'Add GRN (Stock IN)' },
+    { id: 'inv_raw_material_grn', label: 'Raw Materials GRN' },
+    { id: 'inv_raw_material_issue', label: 'Issue to Production' },
+    { id: 'inv_stock_count',      label: 'Stock Count' },
     { id: 'inv_returns_damages',  label: 'Returns & Damages' },
     { id: 'inv_stock_movement',   label: 'Stock Movement' },
   ]},
   { group: 'SALES & ORDERS', color: 'green', perms: [
     { id: 'sales_new_invoice',       label: 'New Invoice' },
+    { id: 'sales_invoice_download',  label: 'Invoice Download / Print' },
     { id: 'sales_purchase_order',    label: 'Purchase Order' },
     { id: 'sales_all_invoices_view', label: 'All Invoices - View' },
     { id: 'sales_all_invoices_edit', label: 'All Invoices - Edit' },
@@ -41,7 +44,8 @@ const PERMISSION_GROUPS = [
     { id: 'transport_vehicle_edit', label: 'Vehicle & Driver - Edit' },
   ]},
   { group: 'HRM', color: 'red', perms: [
-    { id: 'hrm_access', label: 'HRM - Full Access' },
+    { id: 'hrm_access',    label: 'HRM - Full Access' },
+    { id: 'hrm_payroll',   label: 'Payroll - View/Edit' },
   ]},
 ];
 

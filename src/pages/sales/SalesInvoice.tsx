@@ -708,6 +708,7 @@ const SalesInvoice = () => {
         await supabase.from('draft_invoices').update({ status: 'Converted' }).eq('id', activeDraftId);
         sessionStorage.removeItem('_activeDraftId');
       }
+      await logActivity({ company_id: company?.id || '', module: 'SALES', action: editingInvoiceId ? 'INVOICE_UPDATED' : 'INVOICE_CREATED', details: { invoice_no: freshInvoiceNo, customer: customerDetails?.full_name, total: totalNet } });
       alert(`✅ Invoice ${freshInvoiceNo} ${editingInvoiceId ? 'updated' : 'saved'} successfully!`);
       window.print();
       resetForm();

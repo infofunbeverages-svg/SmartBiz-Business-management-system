@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { useCompany } from '../../utils/useCompany';
+import { logActivity } from '../../utils/activityLogger';
 import { Plus, Pencil, Trash2, Search, X, Loader2, FlaskConical } from 'lucide-react';
 
 const UNIT_LABELS: Record<string, string> = {
@@ -48,7 +49,7 @@ const RawMaterialsPage = () => {
     const { error } = await supabase.from('raw_materials').insert([{
       ...formData, company_id: company?.id, quantity: 0,
     }]);
-    if (!error) { closeModal(); fetchData(); }
+    if (!error) { await logActivity({ company_id: company?.id || '', module: 'INVENTORY', action: 'RAW_MATERIAL_CREATED', details: { name: formData.name } }); closeModal(); fetchData(); }
     else alert('Error: ' + error.message);
   };
 
@@ -56,7 +57,7 @@ const RawMaterialsPage = () => {
     if (!formData.name) return alert('Name is required!');
     const { error } = await supabase.from('raw_materials')
       .update(formData).eq('id', selected.id);
-    if (!error) { closeModal(); fetchData(); }
+    if (!error) { await logActivity({ company_id: company?.id || '', module: 'INVENTORY', action: 'RAW_MATERIAL_UPDATED', details: { name: formData.name } }); closeModal(); fetchData(); }
     else alert('Error: ' + error.message);
   };
 

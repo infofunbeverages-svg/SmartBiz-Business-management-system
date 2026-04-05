@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
+import { logActivity } from '../../utils/activityLogger';
 import { useCompany } from '../../utils/useCompany';
 import { Save, Loader2, Plus, Trash2, ArrowLeft, Factory, PackageOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -140,6 +141,7 @@ const RawMaterialIssuePage = () => {
           .eq('id', item.raw_material_id);
       }
 
+      await logActivity({ company_id: company?.id || '', module: 'PRODUCTION', action: 'RM_ISSUED', details: { issue_no: issueData.issue_no, issued_to: issueData.issued_to, items: items.length } });
       alert(`✅ Issue ${issueData.issue_no} saved! Stock deducted.`);
       setItems([{ raw_material_id: '', quantity: 0, unit_price: 0, total_value: 0 }]);
       setIssueData({

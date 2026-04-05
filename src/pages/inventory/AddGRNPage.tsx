@@ -157,6 +157,7 @@ const AddGRNPage = () => {
 
       if (error) throw error;
 
+      await logActivity({ company_id: company?.id || '', module: 'INVENTORY', action: editId ? 'GRN_UPDATED' : 'GRN_CREATED', details: { grn_no: grnData.grn_no, items: rpcItems.length } });
       alert(editId ? "✅ GRN updated successfully!" : "✅ GRN saved successfully!");
       setEditId(null);
       setGrnData({
