@@ -507,22 +507,22 @@ const SalesInvoice = () => {
         newItems[index].mrp_price     = prod.price || 0;
         newItems[index].special_price = prod.special_price || 0;
         newItems[index].units_per_case = prod.bottles_per_case || 12;
-        // Auto pick price based on discount
+        // Auto pick price based on discount (40% හෝ ඊට වඩා නම් special price)
         const disc = Number(newItems[index].item_discount_per || 0);
-        newItems[index].unit_price = (disc > 40 && prod.special_price)
+        newItems[index].unit_price = (disc >= 40 && prod.special_price)
           ? prod.special_price
           : prod.price || 0;
       }
     }
 
-    // Discount change → auto switch price
+    // Discount change → auto switch price (40% හෝ ඊට වඩා නම් special price)
     if (field === 'item_discount_per') {
       const disc = parseFloat(value) || 0;
       const mrp  = newItems[index].mrp_price || newItems[index].unit_price;
       const sp   = newItems[index].special_price || 0;
-      if (disc > 40 && sp) {
+      if (disc >= 40 && sp) {
         newItems[index].unit_price = sp;
-      } else if (disc <= 40 && mrp) {
+      } else if (disc < 40 && mrp) {
         newItems[index].unit_price = mrp;
       }
     }
@@ -541,7 +541,14 @@ const SalesInvoice = () => {
   }, [customerDetails]);
 
   const applyCustomerDiscountToAllLines = (discountPer: number) => {
-    setItems(prev => prev.map(it => ({ ...it, item_discount_per: discountPer, total: calculateLineTotal({ ...it, item_discount_per: discountPer }) })));
+    setItems(prev => prev.map(it => {
+      // 40% හෝ ඊට වඩා නම් special price auto switch
+      const sp  = it.special_price || 0;
+      const mrp = it.mrp_price || it.unit_price;
+      const newPrice = (discountPer >= 40 && sp) ? sp : (mrp || it.unit_price);
+      const updated = { ...it, item_discount_per: discountPer, unit_price: newPrice };
+      return { ...updated, total: calculateLineTotal(updated) };
+    }));
   };
 
   const clearAllItems = () => {
