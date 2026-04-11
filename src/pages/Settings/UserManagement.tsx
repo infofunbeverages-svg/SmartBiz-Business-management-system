@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { UserPlus, Shield, Trash2, Loader2, Users, Lock, Save, RefreshCw, UserCheck, CheckSquare, Square } from 'lucide-react';
+import { UserPlus, Shield, Trash2, Loader2, Users, Lock, Save, RefreshCw, UserCheck, CheckSquare, Square, Activity } from 'lucide-react';
 import { useCompany } from '../../utils/useCompany';
 
 const UserManagement = () => {
@@ -44,6 +44,12 @@ const UserManagement = () => {
     { key: 'hrm_access', label: 'HRM Module', cat: 'Admin' },
     { key: 'admin_access', label: 'Admin Settings', cat: 'Admin' }
   ];
+
+  // 5 min eke athule last_active update una nam online
+  const isOnline = (lastActive: string | null) => {
+    if (!lastActive) return false;
+    return (Date.now() - new Date(lastActive).getTime()) < 5 * 60 * 1000;
+  };
 
   useEffect(() => {
     if (company) {
@@ -149,6 +155,11 @@ const UserManagement = () => {
         <div>
           <h1 className="text-3xl font-black italic uppercase text-slate-900 leading-none">Access <span className="text-blue-600">Control</span></h1>
           <p className="text-slate-400 font-bold text-[9px] mt-2 uppercase tracking-widest">Logged in as: <span className="text-slate-900">{currentUserProfile?.full_name} ({currentUserProfile?.role})</span></p>
+          <p className="text-[9px] font-bold mt-1">
+            <span className="text-green-500">🟢 {users.filter(u => isOnline(u.last_active)).length} Online</span>
+            <span className="text-slate-300 mx-1">|</span>
+            <span className="text-slate-400">{users.length} Total Users</span>
+          </p>
         </div>
         <button onClick={resetForm} className="bg-slate-100 px-4 py-2 rounded-xl font-black text-[10px] uppercase flex items-center gap-2">
           <RefreshCw size={14} /> Reset
@@ -199,9 +210,12 @@ const UserManagement = () => {
           {users.map((u) => (
             <div key={u.id} className={`p-3 flex items-center justify-between gap-2 cursor-pointer ${selectedUserId===u.id?'bg-blue-50':''}`} onClick={() => handleSelectUser(u)}>
               <div className="min-w-0 flex-1">
-                <p className="font-black text-slate-900 text-sm uppercase truncate">{u.full_name}</p>
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isOnline(u.last_active) ? 'bg-green-500' : 'bg-gray-200'}`}/>
+                  <p className="font-black text-slate-900 text-sm uppercase truncate">{u.full_name}</p>
+                </div>
                 <p className="text-[9px] text-slate-400 font-bold uppercase">{u.email}</p>
-                <p className="text-[9px] text-blue-500 font-black uppercase mt-0.5">{u.role}</p>
+                <p className="text-[9px] text-blue-500 font-black uppercase mt-0.5">{u.role} {isOnline(u.last_active) ? '• 🟢 Online' : ''}</p>
               </div>
               <div className="flex items-center gap-2">
                 {u.permissions?.admin_access||u.role==='super_admin' ? <Shield className="text-blue-500" size={16}/> : <Lock className="text-slate-200" size={16}/>}
@@ -218,7 +232,22 @@ const UserManagement = () => {
           <tbody className="divide-y divide-slate-50 text-xs text-left">
             {users.map((u) => (
               <tr key={u.id} className={`hover:bg-blue-50 cursor-pointer ${selectedUserId===u.id?'bg-blue-50':''}`} onClick={() => handleSelectUser(u)}>
-                <td className="p-6 font-black text-slate-900">{u.full_name}<br/><span className="text-[10px] text-slate-400 font-bold uppercase">{u.email}</span></td>
+                <td className="p-6 font-black text-slate-900">
+                  <div className="flex items-center gap-2">
+                    {/* Online indicator */}
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isOnline(u.last_active) ? 'bg-green-500 shadow-sm shadow-green-300' : 'bg-gray-200'}`}/>
+                    <div>
+                      {u.full_name}
+                      <br/>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">{u.email}</span>
+                      {u.last_active && (
+                        <div className="text-[9px] text-slate-300 font-bold mt-0.5">
+                          {isOnline(u.last_active) ? '🟢 Online now' : `Last seen: ${new Date(u.last_active).toLocaleString('en-GB', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </td>
                 <td className="p-6 uppercase font-black text-slate-600">{u.role}</td>
                 <td className="p-6 text-center">{u.permissions?.admin_access||u.role==='super_admin'?<Shield className="text-blue-500 mx-auto"/>:<Lock className="text-slate-200 mx-auto"/>}</td>
                 <td className="p-6 text-right"><Trash2 className="text-slate-200 hover:text-red-500 inline cursor-pointer" size={18}/></td>

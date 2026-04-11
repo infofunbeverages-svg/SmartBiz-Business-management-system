@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, Package, ShoppingCart, 
   DollarSign, ChevronDown, LogOut, Settings, 
-  X, Truck, UserCircle, FileBarChart 
+  X, Truck, UserCircle, FileBarChart, Camera, Pencil, Check
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { supabase } from '../../supabaseClient';
@@ -15,9 +15,14 @@ type SidebarProps = {
 
 const Sidebar: React.FC<SidebarProps> = ({ isMobileSidebarOpen, setIsMobileSidebarOpen }) => {
   const location = useLocation();
-  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
-  const [userRole, setUserRole]       = useState<string | null>(null);
-  const [perms, setPerms]             = useState<any>({});
+  const [openSubmenu, setOpenSubmenu]       = useState<string | null>(null);
+  const [userRole, setUserRole]             = useState<string | null>(null);
+  const [perms, setPerms]                   = useState<any>({});
+  const [userProfile, setUserProfile]       = useState<any>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [editingName, setEditingName]       = useState(false);
+  const [newName, setNewName]               = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -25,15 +30,39 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileSidebarOpen, setIsMobileSideb
       if (user) {
         const { data } = await supabase
           .from('profiles')
-          .select('role, permissions')
+          .select('*')
           .eq('id', user.id)
           .single();
         setUserRole(data?.role || null);
         setPerms(data?.permissions || {});
+        setUserProfile({ ...data, email: user.email });
+        setNewName(data?.full_name || '');
       }
     };
     fetchProfile();
   }, []);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userProfile?.id) return;
+    setUploadingPhoto(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `avatars/${userProfile.id}.${ext}`;
+      await supabase.storage.from('company-assets').upload(path, file, { upsert: true });
+      const { data: urlData } = supabase.storage.from('company-assets').getPublicUrl(path);
+      await supabase.from('profiles').update({ photo_url: urlData.publicUrl }).eq('id', userProfile.id);
+      setUserProfile((p: any) => ({ ...p, photo_url: urlData.publicUrl }));
+    } catch (err: any) { alert('Upload error: ' + err.message); }
+    setUploadingPhoto(false);
+  };
+
+  const handleSaveName = async () => {
+    if (!newName.trim() || !userProfile?.id) return;
+    await supabase.from('profiles').update({ full_name: newName.trim() }).eq('id', userProfile.id);
+    setUserProfile((p: any) => ({ ...p, full_name: newName.trim() }));
+    setEditingName(false);
+  };
 
   // Super admin / admin ta okkoma permissions thiyenawa
   const isSuperAdmin = userRole === 'super_admin' || userRole === 'admin';
@@ -193,10 +222,95 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileSidebarOpen, setIsMobileSideb
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-100 italic">
-          <button type="button" onClick={() => supabase.auth.signOut()} className="flex items-center w-full px-4 py-3.5 min-h-[44px] text-[10px] font-black text-red-500 rounded-xl hover:bg-red-50 uppercase tracking-widest transition-all touch-manipulation">
-            <LogOut size={18} className="mr-3 flex-shrink-0" /> Sign Out
-          </button>
+        {/* ── USER PROFILE SECTION ── */}
+        <div className="border-t border-gray-100">
+          {/* Profile Card */}
+          <div className="p-3">
+            <button type="button"
+              onClick={() => setShowProfileMenu(v => !v)}
+              className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-all">
+              {/* Avatar */}
+              <div className="relative flex-shrink-0">
+                {userProfile?.photo_url ? (
+                  <img src={userProfile.photo_url} alt="avatar"
+                    className="w-9 h-9 rounded-xl object-cover border-2 border-blue-100" />
+                ) : (
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-sm">
+                    {(userProfile?.full_name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              {/* Name + Role */}
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-[11px] font-black text-gray-800 truncate">
+                  {userProfile?.full_name || 'User'}
+                </p>
+                <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest truncate">
+                  {userProfile?.role || 'staff'}
+                </p>
+              </div>
+              <ChevronDown size={14} className={`text-gray-400 flex-shrink-0 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Profile Menu */}
+            {showProfileMenu && (
+              <div className="mt-2 bg-gray-50 rounded-xl p-3 space-y-3">
+                {/* Photo Upload */}
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    {userProfile?.photo_url ? (
+                      <img src={userProfile.photo_url} alt="avatar"
+                        className="w-12 h-12 rounded-xl object-cover border-2 border-blue-200" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-lg">
+                        {(userProfile?.full_name || 'U').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <label className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700">
+                      {uploadingPhoto
+                        ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"/>
+                        : <Camera size={10} className="text-white"/>}
+                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                    </label>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Display Name</p>
+                    {editingName ? (
+                      <div className="flex gap-1">
+                        <input type="text" value={newName}
+                          onChange={e => setNewName(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleSaveName()}
+                          className="flex-1 text-xs font-bold p-1.5 rounded-lg border border-blue-300 outline-none bg-white"
+                          autoFocus />
+                        <button onClick={handleSaveName}
+                          className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                          <Check size={11}/>
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setEditingName(true)}
+                        className="flex items-center gap-1 text-xs font-bold text-gray-700 hover:text-blue-600">
+                        {userProfile?.full_name || 'Set name'}
+                        <Pencil size={10} className="text-gray-400"/>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Email */}
+                <p className="text-[9px] text-gray-400 font-bold truncate px-1">
+                  📧 {userProfile?.email || ''}
+                </p>
+
+                {/* Sign Out */}
+                <button type="button"
+                  onClick={() => supabase.auth.signOut()}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-[10px] font-black text-red-500 rounded-xl hover:bg-red-50 uppercase tracking-widest transition-all">
+                  <LogOut size={14} /> Sign Out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
     </>

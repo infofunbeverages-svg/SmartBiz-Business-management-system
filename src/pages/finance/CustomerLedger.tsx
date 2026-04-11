@@ -43,12 +43,53 @@ export default function CustomerLedger() {
   const [syncing, setSyncing]               = useState(false);
   const [showPayForm, setShowPayForm]       = useState(false);
   const [savingPay, setSavingPay]           = useState(false);
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [savingManual, setSavingManual]     = useState(false);
+  const [manualForm, setManualForm]         = useState({
+    date: new Date().toISOString().split('T')[0],
+    type: 'OPENING_BALANCE' as 'OPENING_BALANCE' | 'MANUAL_DEBIT' | 'MANUAL_CREDIT',
+    amount: 0,
+    description: '',
+  });
   const [dailyDate, setDailyDate]           = useState(new Date().toISOString().split('T')[0]);
   const [payForm, setPayForm]               = useState({
     amount: 0, date: new Date().toISOString().split('T')[0],
     method: 'CASH' as 'CASH'|'CHEQUE'|'BANK',
     reference: '', chequeBank: '', postDate: '',
   });
+
+  const handleSaveManual = async () => {
+    if (!selectedCustId || selectedCustId === 'ALL') return alert('Select a customer!');
+    if (!manualForm.amount || manualForm.amount <= 0) return alert('Enter amount!');
+    setSavingManual(true);
+    try {
+      const isDebit  = manualForm.type === 'OPENING_BALANCE' || manualForm.type === 'MANUAL_DEBIT';
+      const isCredit = manualForm.type === 'MANUAL_CREDIT';
+      const typeLabel = manualForm.type === 'OPENING_BALANCE' ? 'Opening Balance'
+        : manualForm.type === 'MANUAL_DEBIT' ? 'Manual Debit' : 'Manual Credit';
+      const refNo = `${manualForm.type.slice(0,3)}-${Date.now().toString().slice(-6)}`;
+
+      const { error } = await supabase.from('customer_ledger').insert([{
+        company_id:  company.id,
+        customer_id: selectedCustId,
+        date:        manualForm.date,
+        type:        typeLabel,
+        reference:   refNo,
+        description: manualForm.description || typeLabel,
+        debit:       isDebit ? manualForm.amount : 0,
+        credit:      isCredit ? manualForm.amount : 0,
+        status:      'Cleared',
+      }]);
+      if (error) throw error;
+
+      alert('✅ Entry saved!');
+      setShowManualForm(false);
+      setManualForm({ date: new Date().toISOString().split('T')[0], type: 'OPENING_BALANCE', amount: 0, description: '' });
+      fetchCustomers();
+      fetchLedger();
+    } catch (e: any) { alert('Error: ' + e.message); }
+    setSavingManual(false);
+  };
 
   useEffect(() => { if (company) fetchCustomers(); }, [company]);
   useEffect(() => { if (selectedCustId !== 'ALL') fetchLedger(); else setLedger([]); }, [selectedCustId]);
@@ -304,9 +345,13 @@ export default function CustomerLedger() {
           </div>
           {selectedCustId !== 'ALL' && (
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => setShowPayForm(true)}
+              <button onClick={() => { setShowPayForm(true); setShowManualForm(false); }}
                 className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase flex items-center gap-2">
                 <PlusCircle size={15}/> Record Payment
+              </button>
+              <button onClick={() => { setShowManualForm(v => !v); setShowPayForm(false); }}
+                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${showManualForm ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}>
+                📋 Opening / Manual Entry
               </button>
               <button onClick={syncFromInvoices} disabled={syncing}
                 className="bg-amber-500 text-white px-4 py-3 rounded-xl font-black text-[10px] uppercase flex items-center gap-2 disabled:opacity-50">
@@ -335,6 +380,54 @@ export default function CustomerLedger() {
             </div>
             {selectedCust.balance > 0 && <AlertCircle className="text-red-400" size={28}/>}
             {selectedCust.balance <= 0 && <CheckCircle className="text-green-400" size={28}/>}
+          </div>
+        )}
+
+        {/* ── MANUAL / OPENING BALANCE FORM ── */}
+        {showManualForm && selectedCustId !== 'ALL' && (
+          <div className="bg-purple-50 border-2 border-purple-200 p-5 rounded-2xl mb-5">
+            <h3 className="text-sm font-black uppercase text-purple-800 mb-4">📋 Manual Ledger Entry</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+              <div>
+                <label className="text-[10px] font-black text-gray-500 block mb-1">Entry Type</label>
+                <select className="w-full p-3 rounded-xl border font-bold"
+                  value={manualForm.type} onChange={e => setManualForm({...manualForm, type: e.target.value as any})}>
+                  <option value="OPENING_BALANCE">🏁 Opening Balance (Debit)</option>
+                  <option value="MANUAL_DEBIT">➕ Manual Debit (ණය)</option>
+                  <option value="MANUAL_CREDIT">➖ Manual Credit (ගෙවීම)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-500 block mb-1">Date (Back date OK)</label>
+                <input type="date" className="w-full p-3 rounded-xl border font-bold"
+                  value={manualForm.date} onChange={e => setManualForm({...manualForm, date: e.target.value})}/>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-500 block mb-1">Amount (LKR) *</label>
+                <input type="number" className="w-full p-3 rounded-xl border font-bold" placeholder="0.00"
+                  value={manualForm.amount||''} onChange={e => setManualForm({...manualForm, amount: parseFloat(e.target.value)||0})}/>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-500 block mb-1">Description</label>
+                <input type="text" className="w-full p-3 rounded-xl border font-bold" placeholder="Optional note..."
+                  value={manualForm.description} onChange={e => setManualForm({...manualForm, description: e.target.value})}/>
+              </div>
+            </div>
+            <div className="bg-purple-100 rounded-xl p-3 mb-3 text-[11px] font-bold text-purple-700">
+              {manualForm.type === 'OPENING_BALANCE' && '🏁 Opening Balance - Enter the brought forward balance from your previous system'}
+              {manualForm.type === 'MANUAL_DEBIT' && '➕ Manual Debit - Adds to the customer outstanding balance'}
+              {manualForm.type === 'MANUAL_CREDIT' && '➖ Manual Credit - Reduces the customer outstanding balance'}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleSaveManual} disabled={savingManual}
+                className="bg-purple-700 text-white px-6 py-3 rounded-xl font-black text-xs uppercase disabled:opacity-50 flex items-center gap-2">
+                {savingManual && <Loader2 className="animate-spin" size={13}/>} Save Entry
+              </button>
+              <button onClick={() => setShowManualForm(false)}
+                className="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-black text-xs uppercase">
+                Cancel
+              </button>
+            </div>
           </div>
         )}
 

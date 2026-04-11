@@ -119,8 +119,8 @@ const InventoryPage = () => {
         grnQ,
         invQ,
         invQ2,
-        supabase.from('stock_movements').select('product_id, quantity, type').in('type', ['MARKET_RETURN', 'DAMAGE_RETURN']),
-        supabase.from('stock_movements').select('product_id, quantity, type').in('type', ['RESTORE', 'DAMAGE'])
+        supabase.from('stock_movements').select('inventory_id, product_id, quantity, type').in('type', ['MARKET_RETURN', 'DAMAGE_RETURN']),
+        supabase.from('stock_movements').select('inventory_id, product_id, quantity, type').in('type', ['RESTORE', 'DAMAGE'])
       ]);
 
       const inventoryMap: Record<string, number> = {};
@@ -143,18 +143,19 @@ const InventoryPage = () => {
         inventoryMap[pid] -= bottles;
       });
 
-      // Market Returns / Damage Returns (+)
+      // Market Returns / Damage Returns (+) - inventory_id OR product_id
       (returnsRes.data || []).forEach((r: any) => {
-        const pid = r.product_id;
-        if (pid && (Number(r.quantity) || 0) > 0) {
+        const pid = r.inventory_id || r.product_id;
+        if (pid) {
           if (!inventoryMap[pid]) inventoryMap[pid] = 0;
-          inventoryMap[pid] += Number(r.quantity);
+          inventoryMap[pid] += Number(r.quantity) || 0;
         }
       });
 
-      // FIX: Stock Adjustments - quantity already signed (RESTORE=+, DAMAGE=-)
+      // Stock Adjustments - quantity already signed (RESTORE=+, DAMAGE=-)
+      // inventory_id OR product_id (both column names used historically)
       (adjustmentsRes.data || []).forEach((a: any) => {
-        const pid = a.product_id;
+        const pid = a.inventory_id || a.product_id;
         if (pid) {
           if (!inventoryMap[pid]) inventoryMap[pid] = 0;
           inventoryMap[pid] += Number(a.quantity) || 0;

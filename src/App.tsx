@@ -83,22 +83,28 @@ const ProtectedRoute = ({ children, permId }: { children: React.ReactNode; permI
 };
 
 // ─── Auto Logout Constants ────────────────────────────────────────────────────
-const IDLE_TIMEOUT   = 10 * 60 * 1000; // 10 minutes
+const IDLE_TIMEOUT   = 30 * 60 * 1000; // 30 minutes idle = logout
 const WARN_BEFORE    =  2 * 60 * 1000; // warn 2 min before logout
 
 function App() {
-  const [session, setSession]       = useState<any>(null);
-  const [isLoading, setIsLoading]   = useState(true);
+  const [session, setSession]         = useState<any>(null);
+  const [isLoading, setIsLoading]     = useState(true);
   const [showWarning, setShowWarning] = useState(false);
-  const [countdown, setCountdown]   = useState(120); // seconds
+  const [countdown, setCountdown]     = useState(120);
 
   const logoutTimer  = useRef<any>(null);
   const warnTimer    = useRef<any>(null);
   const countdownRef = useRef<any>(null);
   const sessionRef   = useRef<any>(null);
+  const resetTimerRef = useRef<() => void>(() => {});
 
-  // Keep ref in sync so event handlers can read latest session
   useEffect(() => { sessionRef.current = session; }, [session]);
+
+  const clearAll = () => {
+    clearTimeout(logoutTimer.current);
+    clearTimeout(warnTimer.current);
+    clearInterval(countdownRef.current);
+  };
 
   const handleLogout = async () => {
     clearAll();
@@ -107,18 +113,13 @@ function App() {
     setSession(null);
   };
 
-  const clearAll = () => {
-    clearTimeout(logoutTimer.current);
-    clearTimeout(warnTimer.current);
-    clearInterval(countdownRef.current);
-  };
-
+  // resetTimer eka ref eke store karala closure stale reference fix
   const resetTimer = () => {
     if (!sessionRef.current) return;
     clearAll();
     setShowWarning(false);
 
-    // Warn 2 min before
+    // Warn 2 min before logout
     warnTimer.current = setTimeout(() => {
       setShowWarning(true);
       setCountdown(120);
@@ -130,20 +131,37 @@ function App() {
       }, 1000);
     }, IDLE_TIMEOUT - WARN_BEFORE);
 
-    // Auto logout after full idle time
+    // Auto logout after idle time
     logoutTimer.current = setTimeout(() => {
-      handleLogout();
+      if (sessionRef.current) handleLogout();
     }, IDLE_TIMEOUT);
   };
 
+  // resetTimerRef always points to latest resetTimer
+  useEffect(() => { resetTimerRef.current = resetTimer; });
+
+  // Update last_active on login + every 2 mins while active
   useEffect(() => {
-    // Get initial session
+    if (!session?.user?.id) return;
+    const updateActive = async () => {
+      await supabase.from('profiles')
+        .update({ last_active: new Date().toISOString() })
+        .eq('id', session.user.id);
+    };
+    updateActive();
+    const interval = setInterval(updateActive, 2 * 60 * 1000); // every 2 min
+    return () => clearInterval(interval);
+  }, [session?.user?.id]);
+
+  // Stable event handler - always calls latest resetTimer via ref
+  const stableResetTimer = useRef(() => { resetTimerRef.current(); }).current;
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setIsLoading(false);
     });
 
-    // Auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
@@ -155,16 +173,16 @@ function App() {
   useEffect(() => {
     const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart', 'click'];
     if (session) {
-      events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
-      resetTimer();
+      events.forEach(e => window.addEventListener(e, stableResetTimer, { passive: true }));
+      resetTimer(); // initial timer start
     } else {
       clearAll();
       setShowWarning(false);
-      events.forEach(e => window.removeEventListener(e, resetTimer));
+      events.forEach(e => window.removeEventListener(e, stableResetTimer));
     }
     return () => {
       clearAll();
-      events.forEach(e => window.removeEventListener(e, resetTimer));
+      events.forEach(e => window.removeEventListener(e, stableResetTimer));
     };
   }, [session]);
 
